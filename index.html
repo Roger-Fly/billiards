@@ -289,7 +289,9 @@
     }
 
     function addPerson() {
-        const name = prompt("请输入人员姓名：");
+        document.getElementById('inputModal').style.display = 'flex';
+        document.getElementById('inputName').value = '';
+        document.getElementById('inputName').focus();
         if (name) {
             const id = Date.now() + Math.floor(Math.random() * 1000);
             const member = {
@@ -308,6 +310,31 @@
         saveDataToLocalStorage();
     }
 
+    function confirmInput() {
+        const name = document.getElementById('inputName').value.trim();
+        if (name) {
+            const id = Date.now() + Math.floor(Math.random() * 1000);
+            const member = {
+                id: id,
+                name: name,
+                joinTime: startTime ? new Date() : null,
+                totalTime: 0,
+                balance: 0,
+                active: startTime ? true : false,
+                history: []
+            };
+            members.push(member);
+            log(`${member.name} 加入`);
+            renderPeople();
+        }
+        saveDataToLocalStorage();
+        document.getElementById('inputModal').style.display = 'none';
+    }
+
+    function cancelInput() {
+        document.getElementById('inputModal').style.display = 'none';
+    }
+    
     function leaveMember(id) {
         const member = members.find(m => m.id === id);
         if (member && member.active && startTime) {
@@ -807,6 +834,18 @@
     renderPeople();
     setInterval(saveDataToLocalStorage, 5000); // 每 5 秒保存一次
 </script>
+
+<!-- 自定义输入模态框 -->
+<div id="inputModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+        <h3>请输入人员姓名</h3>
+        <input type="text" id="inputName" placeholder="输入名字后点击确认" />
+        <div style="margin-top:10px;text-align:right;">
+            <button onclick="confirmInput()">确认</button>
+            <button onclick="cancelInput()">取消</button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
