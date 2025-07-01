@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>台球分摊&计分</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+            color: #555;
+            font-size: 14px;
+        }
+
+        input[type="number"], input[type="datetime-local"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .btn-add {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-start {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-end {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-reset {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .person {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background-color: #f1f3f5;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .name {
+            font-weight: bold;
+        }
+
+        .status {
+            font-size: 12px;
+            color: green;
+        }
+
+        .balance {
+            font-weight: bold;
+            min-width: 60px;
+            text-align: right;
+            color: #dc3545; /* 红色更醒目 */
+            font-size: 16px;
+            margin-top: 4px;
+        }
+
+        .cost {
+            font-weight: bold;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .log {
+            margin-top: 15px;
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            height: 100px;
+            overflow-y: auto;
+            font-size: 12px;
+            color: #555;
+        }
+
+        .result {
+            margin-top: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            color: #333;
+        }
+
+        /* 弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal h3 {
+            margin-top: 0;
+        }
+
+        .modal button {
+            margin-top: 10px;
+            width: auto;
+            padding: 8px 15px;
+        }
+
+        .history-modal {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .undo-btn {
+            background-color: #6c757d;
+            color: white;
+            font-size: 14px;
+        }
+
+        button[disabled] {
+            background-color: #adb5bd !important;
+            color: #fff !important;
+            cursor: not-allowed;
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h2>🎱 台球分摊&计分</h2>
+
+    <label for="hourlyRate">每小时费用（元）：</label>
+    <input type="number" id="hourlyRate" min="0" step="0.01" placeholder="例如：30">
+
+    <label for="endModeSelect">选择关台方式：</label>
+    <select id="endModeSelect" onchange="toggleEndOptions()">
+        <option value="manual">手动关台</option>
+        <option value="time">指定时间关台</option>
+        <option value="duration">定时长后关台</option>
+    </select>
+
+    <div id="timeOption" style="display:none;">
+        <label for="endTimeInput">请输入关台时间：</label>
+        <input type="datetime-local" id="endTimeInput">
+    </div>
+
+    <div id="durationOption" style="display:none;">
+        <label for="durationInput">多少分钟后关台：</label>
+        <input type="number" id="durationInput" min="1" placeholder="例如：60">
+    </div>
+
+    <label for="waterFeeRate">抽成比例（%）：</label>
+    <input type="number" id="waterFeeRate" min="0" max="100" step="0.01" value="50"/>
+
+    <label for="waterFeeTarget">水费目标金额（元）：</label>
+    <input type="number" id="waterFeeTarget" min="0" step="0.01" value="50"/>
+    
+    <div class="result" id="durationDisplay">
+        <p>已开台时间：00:00:00</p>
+    </div>
+
+    <div class="result" id="result">
+        <p>当前总费用：0.00 元</p>
+        <p>当前水费：0.00 元</p>
+    </div>
+    
+    <button class="btn-add" onclick="addPerson()">+ 添加人员</button>
+    <div id="peopleContainer"></div>
+
+    <button class="btn-start" onclick="startTable()" id="btnStart">开台</button>
+    <button class="btn-end" onclick="endTable()" id="btnEnd" disabled>关台</button>
+    <button class="btn-reset" onclick="resetAll()">重置</button>
+
+    <h3 style="font-size:14px;">操作明细日志</h3>
+    <div class="log" id="log"></div>
+
+</div>
+
+<!-- 弹窗 -->
+<div id="giveScoreModal" class="modal-overlay" style="display:none;"></div>
+<div id="historyModal" class="modal-overlay" style="display:none;"></div>
+
+<script>
+    let hourlyRate = 0;
+    let startTime = null;
+    let scheduledEndTime = null;
+    let timerInterval = null;
+    let durationInterval = null;
+    let members = [];
+    let waterFeeRate = 10;
+    let waterFeeTarget = 50;
+    let collectedWaterFee = 0;
+
+    function toggleEndOptions() {
+        const mode = document.getElementById("endModeSelect").value;
+        document.getElementById("timeOption").style.display = mode === "time" ? "block" : "none";
+        document.getElementById("durationOption").style.display = mode === "duration" ? "block" : "none";
+    }
+
+    function speak(text) {
+        if (!window.speechSynthesis) return;
+        const msg = new SpeechSynthesisUtterance();
+        msg.text = text;
+        msg.lang = 'zh-CN';
+        window.speechSynthesis.speak(msg);
+    }
+
+    function log(msg) {
+        const logDiv = document.getElementById('log');
+        logDiv.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function addPerson() {
+        const name = prompt("请输入人员姓名：");
+        if (name) {
+            const id = Date.now() + Math.floor(Math.random() * 1000);
+            const member = {
+                id: id,
+                name: name,
+                joinTime: startTime ? new Date() : null,
+                totalTime: 0,
+                balance: 0,
+                active: startTime ? true : false,
+                history: []
+            };
+            members.push(member);
+            log(`${member.name} 加入`);
+            renderPeople();
+        }
+        saveDataToLocalStorage();
+    }
+
+    function leaveMember(id) {
+        const member = members.find(m => m.id === id);
+        if (member && member.active && startTime) {
+            const now = new Date();
+            member.totalTime += now - member.joinTime;
+            member.joinTime = null;
+            member.active = false;
+            log(`${member.name} 退出房间`);
+            speak(`${member.name} 已退出房间`);
+            renderPeople();
+        }
+        saveDataToLocalStorage();
+    }
+
+    function rejoinMember(id) {
+        const member = members.find(m => m.id === id);
+        if (member && !member.active && startTime) {
+            member.joinTime = new Date();
+            member.active = true;
+            log(`${member.name} 再次加入房间`);
+            speak(`${member.name} 再次加入房间`);
+            renderPeople();
+        }
+        saveDataToLocalStorage();
+    }
+
+    function openGiveScoreModal(fromId) {
+        const fromMember = members.find(m => m.id === fromId);
+
+        const options = members
+            .filter(m => m.id !== fromId)
+            .map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+
+        if (options === '') {
+            alert("没有其他成员可以转账");
+            return;
+        }
+
+        const modalHTML = `
+            <div class="modal">
+                <h3>转账操作 - 来自：${fromMember.name}</h3>
+                <select id="targetSelect">${options}</select>
+                <input type="number" id="scoreInput" placeholder="输入金额（可为负数）" />
+                <div style="margin-top:10px;text-align:right;">
+                    <button onclick="submitGiveScore(${fromId})">提交</button>
+                    <button onclick="closeModal()">取消</button>
+                </div>
+            </div>
+        `;
+
+        const modalOverlay = document.getElementById('giveScoreModal');
+        modalOverlay.innerHTML = modalHTML;
+        modalOverlay.style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('giveScoreModal').style.display = 'none';
+    }
+
+    function submitGiveScore(fromId) {
+        const targetId = parseInt(document.getElementById('targetSelect').value);
+        const amount = parseFloat(document.getElementById('scoreInput').value);
+
+        if (isNaN(amount)) {
+            alert("请输入有效的金额");
+            return;
+        }
+
+        const fromMember = members.find(m => m.id === fromId);
+        const toMember = members.find(m => m.id === targetId);
+
+        if (!toMember) {
+            alert("未找到该成员");
+            return;
+        }
+
+        // 获取抽成比例与目标金额
+        const rate = parseFloat(document.getElementById('waterFeeRate').value) / 100;
+        const target = parseFloat(document.getElementById('waterFeeTarget').value);
+
+        let fee = 0;
+        let actualAmount = amount;
+
+        if (collectedWaterFee < target) {
+            const remaining = target - collectedWaterFee;
+            const possibleFee = Math.abs(amount) * rate;
+
+            if (possibleFee <= remaining) {
+                fee = possibleFee;
+                collectedWaterFee += fee;
+                actualAmount = amount > 0 ? amount - fee : amount + fee;
+            } else {
+                fee = remaining;
+                collectedWaterFee = target;
+                actualAmount = amount > 0 ? amount - fee : amount + fee;
+            }
+
+            log(`从 ${fromMember.name} 抽取 ${fee.toFixed(2)} 元水费（当前：${collectedWaterFee.toFixed(2)}）`);
+        } else {
+            log("已达水费上限，停止抽成");
+        }
+
+        // 金钱操作
+        fromMember.balance -= amount;
+        toMember.balance += actualAmount;
+
+        // 记录交易历史
+        const timestamp = new Date().toLocaleString();
+        fromMember.history.push({type: 'out', amount, to: toMember.name, fee, timestamp});
+        toMember.history.push({type: 'in', amount: actualAmount, from: fromMember.name, timestamp});
+
+        log(`${fromMember.name} 给 ${toMember.name} ${amount >= 0 ? '转账' : '扣款'}：${amount} 元（实际到账：${actualAmount.toFixed(2)} 元）`);
+
+        speak(`${fromMember.name} 给 ${toMember.name} ${amount >= 0 ? '转了' : '扣了'} ${Math.abs(amount)} 元`);
+
+        closeModal();
+        renderPeople();
+        saveDataToLocalStorage();
+    }
+
+    function showHistory(id) {
+        const member = members.find(m => m.id === id);
+        const historyList = member.history.map(h => {
+            if (h.type === 'in') {
+                return `${h.timestamp} 收到 ${h.from} 转账：${h.amount.toFixed(2)} 元`;
+            } else {
+                return `${h.timestamp} 转出给 ${h.to}：${h.amount.toFixed(2)} 元（抽成：${h.fee.toFixed(2)} 元）`;
+            }
+        }).join('\n');
+
+        const modalHTML = `
+            <div class="modal history-modal">
+                <h3>${member.name} 的交易记录</h3>
+                <pre style="white-space: pre-wrap;">${historyList || '暂无记录'}</pre>
+                <button onclick="closeHistoryModal()">关闭</button>
+            </div>
+        `;
+
+        const modalOverlay = document.getElementById('historyModal');
+        modalOverlay.innerHTML = modalHTML;
+        modalOverlay.style.display = 'flex';
+    }
+
+    function closeHistoryModal() {
+        document.getElementById('historyModal').style.display = 'none';
+    }
+
+    function calculateTotalTableCost() {
+        if (!startTime) return 0;
+        const now = new Date();
+        const totalTimeInHours = (now - startTime) / (1000 * 60 * 60); // 换算为小时
+        return hourlyRate * totalTimeInHours;
+    }
+
+    function calculateMemberCost(member) {
+        const totalTableCost = calculateTotalTableCost();
+
+        // 计算所有成员总在线时间（毫秒）
+        let totalActiveTime = 0;
+        members.forEach(m => {
+            const currentSession = m.active ? (new Date() - m.joinTime) : 0;
+            totalActiveTime += m.totalTime + currentSession;
+        });
+
+        if (totalActiveTime === 0) return 0;
+
+        // 当前成员总在线时间
+        const memberCurrentSession = member.active ? (new Date() - member.joinTime) : 0;
+        const memberTotalTime = member.totalTime + memberCurrentSession;
+
+        return (memberTotalTime / totalActiveTime) * totalTableCost;
+    }
+
+    function startTable() {
+        hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
+        if (isNaN(hourlyRate) || hourlyRate <= 0) {
+            alert("请输入正确的每小时费用！");
+            return;
+        }
+
+        waterFeeRate = parseFloat(document.getElementById('waterFeeRate').value);
+        waterFeeTarget = parseFloat(document.getElementById('waterFeeTarget').value);
+        collectedWaterFee = 0;
+
+        const mode = document.getElementById("endModeSelect").value;
+
+        if (mode === "time") {
+            const timeInput = document.getElementById('endTimeInput').value;
+            if (!timeInput) {
+                alert("请选择一个未来时间");
+                return;
+            }
+            scheduledEndTime = new Date(timeInput);
+            const now = new Date();
+            const delay = scheduledEndTime - now;
+
+            if (delay > 0) {
+                alert(`将在 ${scheduledEndTime.toLocaleTimeString()} 自动关台`);
+                setTimeout(() => {
+                    endTable();
+                    speak("时间到！台球桌已关台");
+                }, delay);
+            } else {
+                alert("设定的时间不能早于当前时间");
+                return;
+            }
+        } else if (mode === "duration") {
+            const duration = parseInt(document.getElementById('durationInput').value);
+            if (isNaN(duration) || duration <= 0) {
+                alert("请输入有效的分钟数");
+                return;
+            }
+            scheduledEndTime = new Date(new Date().getTime() + duration * 60 * 1000);
+            setTimeout(() => {
+                endTable();
+                speak("时间到！台球桌已关台");
+            }, duration * 60 * 1000);
+        }
+
+        startTime = new Date();
+        const durationDisplay = document.getElementById('durationDisplay');
+        durationDisplay.innerHTML = `<p>已开台时间：00:00:00</p>`;
+
+        if (durationInterval) clearInterval(durationInterval); // 清除旧计时器
+
+        durationInterval = setInterval(() => {
+            if (!startTime) return;
+            const elapsed = new Date() - startTime;
+            durationDisplay.innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
+        }, 1000);
+
+        document.getElementById('btnStart').disabled = true;
+        document.getElementById('btnEnd').disabled = false;
+        document.getElementById('hourlyRate').disabled = true;
+        document.getElementById('endModeSelect').disabled = true;
+        document.getElementById('endTimeInput').disabled = true;
+        document.getElementById('durationInput').disabled = true;
+
+        members.forEach(member => {
+            if (!member.active) {
+                member.joinTime = new Date();
+                member.active = true;
+            }
+        });
+
+        if (timerInterval) clearInterval(timerInterval); // 防止重复启动
+        timerInterval = setInterval(updateCosts, 1000);
+        speak("我在小铁很想虐你，就是战别BB！");
+        saveDataToLocalStorage();
+    }
+
+    function endTable() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        const now = new Date();
+
+        members.forEach(member => {
+            if (member.active) {
+                member.totalTime += now - member.joinTime;
+                member.joinTime = null;
+                member.active = false;
+            }
+        });
+
+        updateCosts();
+        const durationDisplay = document.getElementById('durationDisplay');
+        durationDisplay.innerHTML = `<p>已开台时间：00:00:00</p>`;
+
+        if (durationInterval) clearInterval(durationInterval); // 清除旧计时器
+
+        durationInterval = setInterval(() => {
+            if (!startTime) return;
+            const elapsed = new Date() - startTime;
+            durationDisplay.innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
+        }, 1000);
+
+        document.getElementById('btnStart').disabled = false;
+        document.getElementById('btnEnd').disabled = true;
+        document.getElementById('hourlyRate').disabled = false;
+        document.getElementById('endModeSelect').disabled = false;
+        document.getElementById('endTimeInput').disabled = false;
+        document.getElementById('durationInput').disabled = false;
+
+        const totalTableCost = calculateTotalTableCost();
+        alert(`总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
+        saveDataToLocalStorage();
+    }
+
+    function updateCosts() {
+        renderPeople();
+
+        const resultDiv = document.getElementById('result');
+        const totalTableCost = calculateTotalTableCost();
+        resultDiv.innerHTML = `
+            <p>当前总费用：${totalTableCost.toFixed(2)} 元</p>
+            <p>当前水费：${collectedWaterFee.toFixed(2)} 元</p>
+        `;
+    }
+
+    function renderPeople() {
+        const container = document.getElementById('peopleContainer');
+        container.innerHTML = '';
+        members.forEach(member => {
+            const div = document.createElement('div');
+            div.className = 'person';
+            const cost = calculateMemberCost(member).toFixed(2);
+            const status = member.active ? '在线' : '离线';
+
+            div.innerHTML = `
+                <div>
+                    <span class="name">${member.name}</span>
+                    <span class="status">(${status})</span><br/>
+                    <small class="balance">余额：${member.balance.toFixed(2)} 元</small>
+
+                </div>
+                <div style="text-align:right">
+                    <span class="cost">${cost} 元</span>
+                    <div class="actions">
+                        ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}
+                        ${!member.active ? `<button onclick="rejoinMember(${member.id})">✅ 加入</button>` : ''}
+                        <button onclick="openGiveScoreModal(${member.id})">💸 转账</button>
+                        ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}
+                        ${member.history.length > 0 ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function resetAll() {
+        if (confirm("确定要重置所有数据吗？")) {
+            hourlyRate = 0;
+            startTime = null;
+            scheduledEndTime = null;
+            collectedWaterFee = 0;
+            if (timerInterval) clearInterval(timerInterval);
+            members = [];
+            document.getElementById('hourlyRate').value = "";
+            document.getElementById('endTimeInput').value = "";
+            document.getElementById('durationInput').value = "";
+            document.getElementById('btnStart').disabled = false;
+            document.getElementById('btnEnd').disabled = true;
+            document.getElementById('hourlyRate').disabled = false;
+            document.getElementById('result').innerHTML = `
+                <p>当前总费用：0.00 元</p>
+                <p>当前水费：0.00 元</p>
+            `;
+            document.getElementById('log').textContent = "";
+            document.getElementById("timeOption").style.display = "none";
+            document.getElementById("durationOption").style.display = "none";
+            if (durationInterval) {
+                clearInterval(durationInterval);
+                durationInterval = null;
+            }
+            document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：00:00:00</p>`;
+            document.getElementById('endModeSelect').disabled = false;
+            document.getElementById('endTimeInput').disabled = false;
+            document.getElementById('durationInput').disabled = false;
+
+            renderPeople();
+        }
+        saveDataToLocalStorage();
+    }
+
+    function formatDuration(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    }
+
+    function undoLastTransfer(id) {
+        const member = members.find(m => m.id === id);
+        if (!member || member.history.length === 0) return;
+
+        const lastTransfer = member.history.pop();
+        const timestamp = new Date().toLocaleString();
+
+        if (lastTransfer.type === 'out') {
+            // A 转出给 B，A 收回金额，B 扣除到账金额，水费也回滚
+            const { amount, fee, to } = lastTransfer;
+            const toMember = members.find(m => m.name === to);
+
+            member.balance += amount; // A 收回原金额
+            if (toMember) {
+                toMember.balance -= (amount - fee); // B 扣除实际到账金额
+                toMember.history.pop(); // 删除 B 的收款记录
+            }
+
+            collectedWaterFee -= fee; // 回滚水费抽成
+            log(`撤回：${member.name} 转账给 ${to} 的 ${amount.toFixed(2)} 元`);
+            log(`同时回滚水费抽成 ${fee.toFixed(2)} 元（当前：${collectedWaterFee.toFixed(2)}）`);
+        } else if (lastTransfer.type === 'in') {
+            // B 收到 A 的转账，现在要撤销，B 扣除到账金额，A 收回原金额
+            const { amount, from } = lastTransfer;
+            const fromMember = members.find(m => m.name === from);
+
+            member.balance -= amount; // B 扣除到账金额
+            if (fromMember) {
+                fromMember.balance += amount + (fromMember.history.find(h => h.to === member.name)?.fee || 0); // A 收回原金额 + 抽成
+                fromMember.history.pop(); // 删除 A 的转出记录
+            }
+
+            const fee = amount / (1 - waterFeeRate / 100) - amount;
+            collectedWaterFee -= fee; // 回滚水费抽成（根据比例估算）
+            log(`撤回：${from} 转账给 ${member.name} 的 ${amount.toFixed(2)} 元`);
+            log(`同时回滚水费抽成 ${fee.toFixed(2)} 元（当前：${collectedWaterFee.toFixed(2)}）`);
+        }
+
+        renderPeople();
+    }
+
+    function saveDataToLocalStorage() {
+        const data = {
+            hourlyRate,
+            startTime: startTime ? startTime.toISOString() : null,
+            scheduledEndTime: scheduledEndTime ? scheduledEndTime.toISOString() : null,
+            members: members.map(member => ({
+                ...member,
+                joinTime: member.joinTime ? member.joinTime.toISOString() : null,
+            })),
+            waterFeeRate,
+            waterFeeTarget,
+            collectedWaterFee,
+            logContent: document.getElementById('log').textContent
+        };
+        localStorage.setItem('tableData', JSON.stringify(data));
+    }
+
+    function loadDataFromLocalStorage() {
+        const dataStr = localStorage.getItem('tableData');
+        if (dataStr) {
+            const data = JSON.parse(dataStr);
+
+            hourlyRate = data.hourlyRate;
+            startTime = data.startTime ? new Date(data.startTime) : null;
+            scheduledEndTime = data.scheduledEndTime ? new Date(data.scheduledEndTime) : null;
+            waterFeeRate = data.waterFeeRate;
+            waterFeeTarget = data.waterFeeTarget;
+            collectedWaterFee = data.collectedWaterFee;
+
+            // 特别注意：恢复成员数据时要将时间字符串转回 Date 对象
+            members = (data.members || []).map(member => ({
+                ...member,
+                joinTime: member.joinTime ? new Date(member.joinTime) : null,
+            }));
+
+            document.getElementById('hourlyRate').value = hourlyRate;
+            document.getElementById('waterFeeRate').value = waterFeeRate;
+            document.getElementById('waterFeeTarget').value = waterFeeTarget;
+            document.getElementById('log').textContent = data.logContent || '';
+
+            if (startTime) {
+                document.getElementById('btnStart').disabled = true;
+                document.getElementById('btnEnd').disabled = false;
+                document.getElementById('hourlyRate').disabled = true;
+                document.getElementById('endModeSelect').disabled = true;
+                document.getElementById('endTimeInput').disabled = true;
+                document.getElementById('durationInput').disabled = true;
+
+                if (!timerInterval) {
+                    timerInterval = setInterval(updateCosts, 1000);
+                }
+                if (!durationInterval) {
+                    durationInterval = setInterval(() => {
+                        const elapsed = new Date() - startTime;
+                        document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
+                    }, 1000);
+                }
+            }
+
+            updateCosts();
+            renderPeople();
+        }
+    }
+
+    // 页面加载时调用
+    window.addEventListener('load', loadDataFromLocalStorage);
+
+    // 页面可见性变化处理
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && startTime) {
+            if (!timerInterval) {
+                timerInterval = setInterval(updateCosts, 1000);
+            }
+            updateCosts(); // 强制立即刷新一次金额
+        } else if (document.hidden && timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    });
+
+    renderPeople();
+    setInterval(saveDataToLocalStorage, 5000); // 每 5 秒保存一次
+</script>
+
+</body>
+</html>
