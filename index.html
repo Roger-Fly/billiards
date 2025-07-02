@@ -87,17 +87,6 @@
             color: black;
         }
 
-        .person {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 12px;
-            background-color: #f1f3f5;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
         .name {
             font-weight: bold;
         }
@@ -198,6 +187,47 @@
             opacity: 1;
         }
 
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .actions button {
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 8px 12px;
+            font-size: 15px;
+            min-height: 40px;
+            color: #333;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            touch-action: manipulation;
+            flex: 1 1 calc(50% - 6px);
+            max-width: calc(50% - 6px);
+            box-sizing: border-box;
+        }
+
+        .actions button:hover {
+            background: linear-gradient(145deg, #f8f8f8, #e9e9e9);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .actions button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .undo-btn {
+            background: linear-gradient(145deg, #e34848, #d50909);
+            color: white;
+            border-color: #da3838;
+        }
+
     </style>
 </head>
 <body>
@@ -290,8 +320,9 @@
 
     function addPerson() {
         document.getElementById('inputModal').style.display = 'flex';
-        document.getElementById('inputName').value = '';
-        document.getElementById('inputName').focus();
+        const input = document.getElementById('inputName');
+        input.value = '';
+        input.focus();
         if (name) {
             const id = Date.now() + Math.floor(Math.random() * 1000);
             const member = {
@@ -861,7 +892,6 @@
     window.addEventListener('load', () => {
         loadDataFromLocalStorage();
 
-        // 如果已经关台，则不启动计时器
         if (!isTableEnded()) {
             if (!timerInterval) timerInterval = setInterval(updateCosts, 1000);
             if (!durationInterval) {
