@@ -668,7 +668,6 @@
             }
         });
 
-        updateCosts();
         const totalDuration = new Date() - startTime;
         localStorage.setItem('lastTotalDuration', totalDuration);
         document.getElementById('durationDisplay').innerHTML = `<p>⏲️ 开台总时长：${formatDuration(totalDuration)}</p>`;
@@ -695,7 +694,7 @@
             data.isEnded = true;
             localStorage.setItem('tableData', JSON.stringify(data));
         }
-
+        updateCosts();     // 更新费用
         saveDataToLocalStorage();
     }
 
