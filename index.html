@@ -337,6 +337,7 @@
             };
             members.push(member);
             log(`${member.name} 加入`);
+            speak(`${member.name} 加入房间`)
             renderPeople();
         }
         saveDataToLocalStorage();
@@ -565,6 +566,11 @@
     }
 
     function startTable() {
+        if (members.length === 0) {
+            alert("至少需要添加一名成员才能开台");
+            speak("至少需要添加一名成员才能开台");
+            return;
+        }
         hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
         if (isNaN(hourlyRate) || hourlyRate <= 0) {
             alert("请输入正确的每小时费用！");
@@ -735,6 +741,8 @@
         `;
             container.appendChild(div);
         });
+        // 禁用开台按钮，如果无成员
+        document.getElementById('btnStart').disabled = members.length === 0;
     }
 
     function resetAll() {
