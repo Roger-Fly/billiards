@@ -263,7 +263,7 @@
     <input type="number" id="waterFeeTarget" min="0" step="0.01" value="50"/>
 
     <div class="result" id="durationDisplay">
-        <p>⏲ 已开台时间：00:00:00</p>
+        <p>⏲️已开台时间：00:00:00</p>
     </div>
 
     <div class="result" id="result">
@@ -618,14 +618,14 @@
 
         startTime = new Date();
         const durationDisplay = document.getElementById('durationDisplay');
-        durationDisplay.innerHTML = `<p>⏲ 已开台时间：00:00:00</p>`;
+        durationDisplay.innerHTML = `<p>⏲️已开台时间：00:00:00</p>`;
 
         if (durationInterval) clearInterval(durationInterval); // 清除旧计时器
 
         durationInterval = setInterval(() => {
             if (!startTime) return;
             const elapsed = new Date() - startTime;
-            durationDisplay.innerHTML = `<p>⏲ 已开台时间：${formatDuration(elapsed)}</p>`;
+            durationDisplay.innerHTML = `<p>⏲️已开台时间：${formatDuration(elapsed)}</p>`;
         }, 1000);
 
         document.getElementById('btnStart').disabled = true;
@@ -669,7 +669,7 @@
         });
 
         updateCosts();
-        document.getElementById('durationDisplay').innerHTML = `<p>⏲ 已开台时间：00:00:00</p>`;
+        document.getElementById('durationDisplay').innerHTML = `<p>⏲️已开台时间：00:00:00</p>`;
 
         document.getElementById('btnStart').disabled = false;
         document.getElementById('btnEnd').disabled = true;
@@ -770,7 +770,7 @@
                 clearInterval(durationInterval);
                 durationInterval = null;
             }
-            document.getElementById('durationDisplay').innerHTML = `<p>⏲ 已开台时间：00:00:00</p>`;
+            document.getElementById('durationDisplay').innerHTML = `<p>⏲️已开台时间：00:00:00</p>`;
             document.getElementById('endModeSelect').disabled = false;
             document.getElementById('endTimeInput').disabled = false;
             document.getElementById('durationInput').disabled = false;
@@ -906,7 +906,7 @@
                 if (!durationInterval) {
                     durationInterval = setInterval(() => {
                         const elapsed = new Date() - startTime;
-                        document.getElementById('durationDisplay').innerHTML = `<p>⏲ 已开台时间：${formatDuration(elapsed)}</p>`;
+                        document.getElementById('durationDisplay').innerHTML = `<p>⏲️已开台时间：${formatDuration(elapsed)}</p>`;
                     }, 1000);
                 }
             } else {
@@ -933,7 +933,7 @@
             if (!durationInterval) {
                 durationInterval = setInterval(() => {
                     const elapsed = new Date() - startTime;
-                    document.getElementById('durationDisplay').innerHTML = `<p>⏲ 已开台时间：${formatDuration(elapsed)}</p>`;
+                    document.getElementById('durationDisplay').innerHTML = `<p>⏲️已开台时间：${formatDuration(elapsed)}</p>`;
                 }, 1000);
             }
         }
