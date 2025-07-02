@@ -334,7 +334,7 @@
     function cancelInput() {
         document.getElementById('inputModal').style.display = 'none';
     }
-    
+
     function leaveMember(id) {
         const member = members.find(m => m.id === id);
         if (member && member.active && startTime) {
@@ -342,6 +342,19 @@
             member.totalTime += now - member.joinTime;
             member.joinTime = null;
             member.active = false;
+
+            // 退出时保存当前费用为 fixedCost
+            member.fixedCost = calculateMemberCost(member);
+
+            // 检查是否只剩一个在线成员
+            const activeMembers = members.filter(m => m.active);
+            if (activeMembers.length === 0) {
+                const confirmLeave = confirm("这是最后一个在线人员，是否同时关台？");
+                if (confirmLeave) {
+                    endTable(); // 调用关台逻辑
+                }
+            }
+
             log(`${member.name} 退出房间`);
             speak(`${member.name} 已退出房间`);
             renderPeople();
@@ -354,6 +367,7 @@
         if (member && !member.active && startTime) {
             member.joinTime = new Date();
             member.active = true;
+            delete member.fixedCost; // 删除 fixedCost，恢复动态计算
             log(`${member.name} 再次加入房间`);
             speak(`${member.name} 再次加入房间`);
             renderPeople();
@@ -591,6 +605,11 @@
             clearInterval(timerInterval);
             timerInterval = null;
         }
+        if (durationInterval) {
+            clearInterval(durationInterval);
+            durationInterval = null;
+        }
+
         const now = new Date();
 
         members.forEach(member => {
@@ -602,16 +621,7 @@
         });
 
         updateCosts();
-        const durationDisplay = document.getElementById('durationDisplay');
-        durationDisplay.innerHTML = `<p>已开台时间：00:00:00</p>`;
-
-        if (durationInterval) clearInterval(durationInterval); // 清除旧计时器
-
-        durationInterval = setInterval(() => {
-            if (!startTime) return;
-            const elapsed = new Date() - startTime;
-            durationDisplay.innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
-        }, 1000);
+        document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：00:00:00</p>`;
 
         document.getElementById('btnStart').disabled = false;
         document.getElementById('btnEnd').disabled = true;
@@ -622,6 +632,15 @@
 
         const totalTableCost = calculateTotalTableCost();
         alert(`总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
+
+        // 强制标记为已关台
+        const dataStr = localStorage.getItem('tableData');
+        if (dataStr) {
+            const data = JSON.parse(dataStr);
+            data.isEnded = true;
+            localStorage.setItem('tableData', JSON.stringify(data));
+        }
+
         saveDataToLocalStorage();
     }
 
@@ -642,27 +661,35 @@
         members.forEach(member => {
             const div = document.createElement('div');
             div.className = 'person';
-            const cost = calculateMemberCost(member).toFixed(2);
+
+            // 如果成员已退出，使用静态费用
+            let costText = '';
+            if (!member.active && !member.fixedCost) {
+                // 成员退出时保存一次最终费用
+                const cost = calculateMemberCost(member);
+                member.fixedCost = cost; // 保存退出时的费用
+                costText = `${cost.toFixed(2)} 元`;
+            } else if (member.active) {
+                const cost = calculateMemberCost(member);
+                costText = `${cost.toFixed(2)} 元`;
+            } else {
+                costText = `${member.fixedCost?.toFixed(2) || 0} 元`;
+            }
+
             const status = member.active ? '在线' : '离线';
 
-            div.innerHTML = `
-                <div>
-                    <span class="name">${member.name}</span>
-                    <span class="status">(${status})</span><br/>
-                    <small class="balance">余额：${member.balance.toFixed(2)} 元</small>
-
-                </div>
-                <div style="text-align:right">
-                    <span class="cost">${cost} 元</span>
-                    <div class="actions">
-                        ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}
-                        ${!member.active ? `<button onclick="rejoinMember(${member.id})">✅ 加入</button>` : ''}
-                        <button onclick="openGiveScoreModal(${member.id})">💸 转账</button>
-                        ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}
-                        ${member.history.length > 0 ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}
-                    </div>
-                </div>
-            `;
+            div.innerHTML = `            <div>
+                <span class="name">${member.name}</span>
+                <span class="status">(${status})</span><br/>
+                <small class="balance">余额：${member.balance.toFixed(2)} 元</small>
+            </div>
+            <div style="text-align:right">
+                <span class="cost">${costText}</span>
+                <div class="actions">
+                    ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}                    ${!member.active ? `<button onclick="rejoinMember(${member.id})">✅ 加入</button>` : ''}                    <button onclick="openGiveScoreModal(${member.id})">💸 转账</button>
+                    ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}                    ${member.history.length > 0 ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}                </div>
+            </div>
+        `;
             container.appendChild(div);
         });
     }
@@ -763,7 +790,8 @@
             waterFeeRate,
             waterFeeTarget,
             collectedWaterFee,
-            logContent: document.getElementById('log').textContent
+            logContent: document.getElementById('log').textContent,
+            isEnded: !startTime || members.every(m => !m.active) // 新增字段：是否已关台
         };
         localStorage.setItem('tableData', JSON.stringify(data));
     }
@@ -791,7 +819,9 @@
             document.getElementById('waterFeeTarget').value = waterFeeTarget;
             document.getElementById('log').textContent = data.logContent || '';
 
-            if (startTime) {
+            const isEnded = data.isEnded === true; // 读取是否已关台
+
+            if (startTime && !isEnded) { // 只有未关台才启动定时器
                 document.getElementById('btnStart').disabled = true;
                 document.getElementById('btnEnd').disabled = false;
                 document.getElementById('hourlyRate').disabled = true;
@@ -808,6 +838,9 @@
                         document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
                     }, 1000);
                 }
+            } else {
+                document.getElementById('btnStart').disabled = false;
+                document.getElementById('btnEnd').disabled = true;
             }
 
             updateCosts();
@@ -815,8 +848,26 @@
         }
     }
 
+    // 判断是否已经关台
+    function isTableEnded() {
+        return !startTime || (members.every(m => !m.active));
+    }
+
     // 页面加载时调用
-    window.addEventListener('load', loadDataFromLocalStorage);
+    window.addEventListener('load', () => {
+        loadDataFromLocalStorage();
+
+        // 如果已经关台，则不启动计时器
+        if (!isTableEnded()) {
+            if (!timerInterval) timerInterval = setInterval(updateCosts, 1000);
+            if (!durationInterval) {
+                durationInterval = setInterval(() => {
+                    const elapsed = new Date() - startTime;
+                    document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
+                }, 1000);
+            }
+        }
+    });
 
     // 页面可见性变化处理
     document.addEventListener("visibilitychange", () => {
