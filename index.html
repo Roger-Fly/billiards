@@ -332,7 +332,8 @@
                 totalTime: 0,
                 balance: 0,
                 active: startTime ? true : false,
-                history: []
+                history: [],
+                undoDisabled: false
             };
             members.push(member);
             log(`${member.name} 加入`);
@@ -352,7 +353,8 @@
                 totalTime: 0,
                 balance: 0,
                 active: startTime ? true : false,
-                history: []
+                history: [],
+                undoDisabled: false
             };
             members.push(member);
             log(`${member.name} 加入`);
@@ -426,7 +428,7 @@
             <div class="modal">
                 <h3>转账操作 - 来自：${fromMember.name}</h3>
                 <select id="targetSelect">${options}</select>
-                <input type="number" id="scoreInput" placeholder="输入金额（可为负数）" />
+                <input type="number" id="scoreInput" placeholder="输入金额" min="0.01" step="0.01" />
                 <div style="margin-top:10px;text-align:right;">
                     <button onclick="submitGiveScore(${fromId})">提交</button>
                     <button onclick="closeModal()">取消</button>
@@ -449,6 +451,10 @@
 
         if (isNaN(amount)) {
             alert("请输入有效的金额");
+            return;
+        }
+        if (amount <= 0) {
+            alert("请输入大于 0 的金额");
             return;
         }
 
@@ -494,6 +500,7 @@
         const timestamp = new Date().toLocaleString();
         fromMember.history.push({type: 'out', amount, to: toMember.name, fee, timestamp});
         toMember.history.push({type: 'in', amount: actualAmount, from: fromMember.name, timestamp});
+        fromMember.undoDisabled = false;
 
         log(`${fromMember.name} 给 ${toMember.name} ${amount >= 0 ? '转账' : '扣款'}：${amount} 元（实际到账：${actualAmount.toFixed(2)} 元）`);
 
@@ -722,7 +729,8 @@
                 <span class="cost">${costText}</span>
                 <div class="actions">
                     ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}                    ${!member.active ? `<button onclick="rejoinMember(${member.id})">✅ 加入</button>` : ''}                    <button onclick="openGiveScoreModal(${member.id})">💸 转账</button>
-                    ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}                    ${member.history.length > 0 ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}                </div>
+                    ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}                    ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}
+                </div>
             </div>
         `;
             container.appendChild(div);
@@ -774,43 +782,61 @@
 
     function undoLastTransfer(id) {
         const member = members.find(m => m.id === id);
-        if (!member || member.history.length === 0) return;
+        if (!member || !member.history.length) return;
 
-        const lastTransfer = member.history.pop();
-        const timestamp = new Date().toLocaleString();
+        // 防止重复点击
+        if (member.undoDisabled) {
+            alert("每次只能撤回一次，转账后可再次操作");
+            return;
+        }
+
+        const lastOutIndex = member.history.map(h => h.type).lastIndexOf('out');
+
+        if (lastOutIndex === -1) {
+            alert("无可撤回的转账");
+            return;
+        }
+
+        const lastTransfer = member.history[lastOutIndex];
 
         if (lastTransfer.type === 'out') {
-            // A 转出给 B，A 收回金额，B 扣除到账金额，水费也回滚
-            const {amount, fee, to} = lastTransfer;
+            const { amount, fee, to } = lastTransfer;
             const toMember = members.find(m => m.name === to);
 
-            member.balance += amount; // A 收回原金额
+            // A 转账给 B，A 收回金额，B 扣除到账金额，水费也回滚
+            member.balance += amount;
             if (toMember) {
-                toMember.balance -= (amount - fee); // B 扣除实际到账金额
-                toMember.history.pop(); // 删除 B 的收款记录
+                toMember.balance -= (amount - fee);
+
+                const toHistoryIndex = toMember.history.findIndex(h => h.from === member.name && h.amount === (amount - fee));
+                if (toHistoryIndex !== -1) {
+                    toMember.history.splice(toHistoryIndex, 1);
+                }
             }
 
-            collectedWaterFee -= fee; // 回滚水费抽成
+            collectedWaterFee -= fee;
             log(`撤回：${member.name} 转账给 ${to} 的 ${amount.toFixed(2)} 元`);
             log(`同时回滚水费抽成 ${fee.toFixed(2)} 元（当前：${collectedWaterFee.toFixed(2)}）`);
-        } else if (lastTransfer.type === 'in') {
-            // B 收到 A 的转账，现在要撤销，B 扣除到账金额，A 收回原金额
-            const {amount, from} = lastTransfer;
-            const fromMember = members.find(m => m.name === from);
 
-            member.balance -= amount; // B 扣除到账金额
-            if (fromMember) {
-                fromMember.balance += amount + (fromMember.history.find(h => h.to === member.name)?.fee || 0); // A 收回原金额 + 抽成
-                fromMember.history.pop(); // 删除 A 的转出记录
-            }
+            // 添加语音提醒 👇
+            speak(`${member.name} 撤回给 ${to} 的转账：${Math.abs(amount)} 元`);
 
-            const fee = amount / (1 - waterFeeRate / 100) - amount;
-            collectedWaterFee -= fee; // 回滚水费抽成（根据比例估算）
-            log(`撤回：${from} 转账给 ${member.name} 的 ${amount.toFixed(2)} 元`);
-            log(`同时回滚水费抽成 ${fee.toFixed(2)} 元（当前：${collectedWaterFee.toFixed(2)}）`);
+            // 删除 A 的转出记录
+            member.history.splice(lastOutIndex, 1);
+
+            // 设置撤回状态为 true
+            member.undoDisabled = true;
+        } else {
+            alert("只能由转账发起人进行撤回操作");
+            return;
         }
 
         renderPeople();
+        saveDataToLocalStorage();
+    }
+
+    function hasUnReversedOut(member) {
+        return member.history.some(h => h.type === 'out') && !member.undoDisabled;
     }
 
     function saveDataToLocalStorage() {
@@ -821,6 +847,7 @@
             members: members.map(member => ({
                 ...member,
                 joinTime: member.joinTime ? member.joinTime.toISOString() : null,
+                undoDisabled: !!member.undoDisabled
             })),
             waterFeeRate,
             waterFeeTarget,
@@ -847,6 +874,7 @@
             members = (data.members || []).map(member => ({
                 ...member,
                 joinTime: member.joinTime ? new Date(member.joinTime) : null,
+                undoDisabled: !!member.undoDisabled
             }));
 
             document.getElementById('hourlyRate').value = hourlyRate;
