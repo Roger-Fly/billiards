@@ -231,7 +231,7 @@
 
     <label for="waterFeeTarget">水费目标金额（元）：</label>
     <input type="number" id="waterFeeTarget" min="0" step="0.01" value="50"/>
-    
+
     <div class="result" id="durationDisplay">
         <p>已开台时间：00:00:00</p>
     </div>
@@ -240,8 +240,8 @@
         <p>当前总费用：0.00 元</p>
         <p>当前水费：0.00 元</p>
     </div>
-    
-    <button class="btn-add" onclick="addPerson()">+ 添加人员</button>
+
+    <button class="btn-add" onclick="addPerson()">+ 添加成员</button>
     <div id="peopleContainer"></div>
 
     <button class="btn-start" onclick="startTable()" id="btnStart">开台</button>
@@ -339,27 +339,31 @@
         const member = members.find(m => m.id === id);
         if (member && member.active && startTime) {
             const now = new Date();
-            member.totalTime += now - member.joinTime;
-            member.joinTime = null;
-            member.active = false;
-
-            // 退出时保存当前费用为 fixedCost
-            member.fixedCost = calculateMemberCost(member);
+            const duration = now - member.joinTime;
 
             // 检查是否只剩一个在线成员
             const activeMembers = members.filter(m => m.active);
-            if (activeMembers.length === 0) {
-                const confirmLeave = confirm("这是最后一个在线人员，是否同时关台？");
-                if (confirmLeave) {
-                    endTable(); // 调用关台逻辑
-                }
+
+            if (activeMembers.length === 1) {
+                // 用户选择不关台：不改变 active 状态，保持在线
+                // 可以提示不能退出
+                alert("至少需要一人在线，无法退出");
+                return;
+            } else {
+                // 非最后一个成员，正常退出
+                member.totalTime += duration;
+                member.joinTime = null;
+                member.active = false;
             }
+
+            // 保存费用
+            member.fixedCost = calculateMemberCost(member);
 
             log(`${member.name} 退出房间`);
             speak(`${member.name} 已退出房间`);
             renderPeople();
+            saveDataToLocalStorage();
         }
-        saveDataToLocalStorage();
     }
 
     function rejoinMember(id) {
@@ -746,7 +750,7 @@
 
         if (lastTransfer.type === 'out') {
             // A 转出给 B，A 收回金额，B 扣除到账金额，水费也回滚
-            const { amount, fee, to } = lastTransfer;
+            const {amount, fee, to} = lastTransfer;
             const toMember = members.find(m => m.name === to);
 
             member.balance += amount; // A 收回原金额
@@ -760,7 +764,7 @@
             log(`同时回滚水费抽成 ${fee.toFixed(2)} 元（当前：${collectedWaterFee.toFixed(2)}）`);
         } else if (lastTransfer.type === 'in') {
             // B 收到 A 的转账，现在要撤销，B 扣除到账金额，A 收回原金额
-            const { amount, from } = lastTransfer;
+            const {amount, from} = lastTransfer;
             const fromMember = members.find(m => m.name === from);
 
             member.balance -= amount; // B 扣除到账金额
@@ -889,8 +893,8 @@
 <!-- 自定义输入模态框 -->
 <div id="inputModal" class="modal-overlay" style="display:none;">
     <div class="modal">
-        <h3>请输入人员姓名</h3>
-        <input type="text" id="inputName" placeholder="输入名字后点击确认" />
+        <h3>请输入成员姓名</h3>
+        <input type="text" id="inputName" placeholder="输入名字后点击确认"/>
         <div style="margin-top:10px;text-align:right;">
             <button onclick="confirmInput()">确认</button>
             <button onclick="cancelInput()">取消</button>
