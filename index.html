@@ -263,20 +263,20 @@
     <input type="number" id="waterFeeTarget" min="0" step="0.01" value="50"/>
 
     <div class="result" id="durationDisplay">
-        <p>已开台时间：00:00:00</p>
+        <p>⏲ 已开台时间：00:00:00</p>
     </div>
 
     <div class="result" id="result">
-        <p>当前总费用：0.00 元</p>
-        <p>当前水费：0.00 元</p>
+        <p>💳 当前总费用：0.00 元</p>
+        <p>🫖 当前水费：0.00 元</p>
     </div>
 
-    <button class="btn-add" onclick="addPerson()">+ 添加成员</button>
+    <button class="btn-add" onclick="addPerson()">🙋‍♂ 添加成员</button>
     <div id="peopleContainer"></div>
 
-    <button class="btn-start" onclick="startTable()" id="btnStart">开台</button>
-    <button class="btn-end" onclick="endTable()" id="btnEnd" disabled>关台</button>
-    <button class="btn-reset" onclick="resetAll()">重置</button>
+    <button class="btn-start" onclick="startTable()" id="btnStart">🔥 开台</button>
+    <button class="btn-end" onclick="endTable()" id="btnEnd" disabled>⛔ 关台</button>
+    <button class="btn-reset" onclick="resetAll()">♻ 重置</button>
 
     <h3 style="font-size:14px;">操作明细日志</h3>
     <div class="log" id="log"></div>
@@ -618,14 +618,14 @@
 
         startTime = new Date();
         const durationDisplay = document.getElementById('durationDisplay');
-        durationDisplay.innerHTML = `<p>已开台时间：00:00:00</p>`;
+        durationDisplay.innerHTML = `<p>⏲ 已开台时间：00:00:00</p>`;
 
         if (durationInterval) clearInterval(durationInterval); // 清除旧计时器
 
         durationInterval = setInterval(() => {
             if (!startTime) return;
             const elapsed = new Date() - startTime;
-            durationDisplay.innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
+            durationDisplay.innerHTML = `<p>⏲ 已开台时间：${formatDuration(elapsed)}</p>`;
         }, 1000);
 
         document.getElementById('btnStart').disabled = true;
@@ -669,7 +669,7 @@
         });
 
         updateCosts();
-        document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：00:00:00</p>`;
+        document.getElementById('durationDisplay').innerHTML = `<p>⏲ 已开台时间：00:00:00</p>`;
 
         document.getElementById('btnStart').disabled = false;
         document.getElementById('btnEnd').disabled = true;
@@ -698,8 +698,8 @@
         const resultDiv = document.getElementById('result');
         const totalTableCost = calculateTotalTableCost();
         resultDiv.innerHTML = `
-            <p>当前总费用：${totalTableCost.toFixed(2)} 元</p>
-            <p>当前水费：${collectedWaterFee.toFixed(2)} 元</p>
+            <p>💳 当前总费用：${totalTableCost.toFixed(2)} 元</p>
+            <p>🫖 当前水费：${collectedWaterFee.toFixed(2)} 元</p>
         `;
     }
 
@@ -729,7 +729,7 @@
             div.innerHTML = `            <div>
                 <span class="name">${member.name}</span>
                 <span class="status">(${status})</span><br/>
-                <small class="balance">余额：${member.balance.toFixed(2)} 元</small>
+                <small class="balance">💰 余额：${member.balance.toFixed(2)} 元</small>
             </div>
             <div style="text-align:right">
                 <span class="cost">${costText}</span>
@@ -760,8 +760,8 @@
             document.getElementById('btnEnd').disabled = true;
             document.getElementById('hourlyRate').disabled = false;
             document.getElementById('result').innerHTML = `
-                <p>当前总费用：0.00 元</p>
-                <p>当前水费：0.00 元</p>
+                <p>💳 当前总费用：0.00 元</p>
+                <p>🫖 当前水费：0.00 元</p>
             `;
             document.getElementById('log').textContent = "";
             document.getElementById("timeOption").style.display = "none";
@@ -770,7 +770,7 @@
                 clearInterval(durationInterval);
                 durationInterval = null;
             }
-            document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：00:00:00</p>`;
+            document.getElementById('durationDisplay').innerHTML = `<p>⏲ 已开台时间：00:00:00</p>`;
             document.getElementById('endModeSelect').disabled = false;
             document.getElementById('endTimeInput').disabled = false;
             document.getElementById('durationInput').disabled = false;
@@ -906,7 +906,7 @@
                 if (!durationInterval) {
                     durationInterval = setInterval(() => {
                         const elapsed = new Date() - startTime;
-                        document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
+                        document.getElementById('durationDisplay').innerHTML = `<p>⏲ 已开台时间：${formatDuration(elapsed)}</p>`;
                     }, 1000);
                 }
             } else {
@@ -933,7 +933,7 @@
             if (!durationInterval) {
                 durationInterval = setInterval(() => {
                     const elapsed = new Date() - startTime;
-                    document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
+                    document.getElementById('durationDisplay').innerHTML = `<p>⏲ 已开台时间：${formatDuration(elapsed)}</p>`;
                 }, 1000);
             }
         }
