@@ -331,6 +331,7 @@
                 joinTime: startTime ? new Date() : null,
                 totalTime: 0,
                 balance: 0,
+                finalBalance: 0,
                 active: startTime ? true : false,
                 history: [],
                 undoDisabled: false
@@ -353,6 +354,7 @@
                 joinTime: startTime ? new Date() : null,
                 totalTime: 0,
                 balance: 0,
+                finalBalance: 0,
                 active: startTime ? true : false,
                 history: [],
                 undoDisabled: false
@@ -649,14 +651,8 @@
     }
 
     function endTable() {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-        }
-        if (durationInterval) {
-            clearInterval(durationInterval);
-            durationInterval = null;
-        }
+        if (timerInterval) clearInterval(timerInterval);
+        if (durationInterval) clearInterval(durationInterval);
 
         const now = new Date();
 
@@ -668,33 +664,27 @@
             }
         });
 
-        const totalDuration = new Date() - startTime;
-        localStorage.setItem('lastTotalDuration', totalDuration);
-        document.getElementById('durationDisplay').innerHTML = `<p>⏲️ 开台总时长：${formatDuration(totalDuration)}</p>`;
-
-        document.getElementById('btnStart').disabled = true;
-        document.getElementById('btnEnd').disabled = true;
-        document.getElementById('endModeSelect').disabled = true;
-        document.getElementById('endTimeInput').disabled = true;
-        document.getElementById('durationInput').disabled = true;
-        document.getElementById('waterFeeRate').disabled = true;
-        document.getElementById('waterFeeTarget').disabled = true;
-        document.getElementById('btnAdd').disabled = true;
-        document.getElementById('btnReset').disabled = false;
+        // 🔐 计算并保存最终费用
+        members.forEach(member => {
+            member.finalBalance = calculateMemberCost(member); // 保存最终费用
+        });
 
         const totalTableCost = calculateTotalTableCost();
         localStorage.setItem('lastTotalCost', totalTableCost);
         localStorage.setItem('lastWaterFee', collectedWaterFee);
+
+        // ✅ 弹窗提示并保存数据
         alert(`总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
 
-        // 强制标记为已关台
+        // 标记为已关台
         const dataStr = localStorage.getItem('tableData');
         if (dataStr) {
             const data = JSON.parse(dataStr);
             data.isEnded = true;
             localStorage.setItem('tableData', JSON.stringify(data));
         }
-        updateCosts();     // 更新费用
+
+        updateCosts();
         saveDataToLocalStorage();
     }
 
@@ -731,23 +721,28 @@
             const div = document.createElement('div');
             div.className = 'person';
 
-            // 如果成员已退出，使用静态费用
             let costText = '';
-            if (!member.active && !member.fixedCost) {
-                // 成员退出时保存一次最终费用
-                const cost = calculateMemberCost(member);
-                member.fixedCost = cost; // 保存退出时的费用
-                costText = `${cost.toFixed(2)} 元`;
-            } else if (member.active) {
-                const cost = calculateMemberCost(member);
-                costText = `${cost.toFixed(2)} 元`;
+
+            // 如果已关台，使用 finalBalance
+            if (isTableEnded()) {
+                costText = `${member.finalBalance?.toFixed(2) || 0} 元`;
             } else {
-                costText = `${member.fixedCost?.toFixed(2) || 0} 元`;
+                // 否则继续使用动态计算值
+                if (!member.active && !member.fixedCost) {
+                    const cost = calculateMemberCost(member);
+                    member.fixedCost = cost;
+                    costText = `${cost.toFixed(2)} 元`;
+                } else if (member.active) {
+                    costText = `${calculateMemberCost(member).toFixed(2)} 元`;
+                } else {
+                    costText = `${member.fixedCost?.toFixed(2) || 0} 元`;
+                }
             }
 
             const status = member.active ? '在线' : '离线';
 
-            div.innerHTML = `            <div>
+            div.innerHTML = `
+            <div>
                 <span class="name">${member.name}</span>
                 <span class="status">(${status})</span><br/>
                 <small class="balance">💰 余额：${member.balance.toFixed(2)} 元</small>
@@ -755,16 +750,18 @@
             <div style="text-align:right">
                 <span class="cost">${costText}</span>
                 <div class="actions">
-                    ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}                    ${!member.active ? `<button onclick="rejoinMember(${member.id})">✅ 加入</button>` : ''}                    <button onclick="openGiveScoreModal(${member.id})">💸 转账</button>
-                    ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}                    ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}
+                    ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}
+                    ${!member.active ? `<button onclick="rejoinMember(${member.id})">✅ 加入</button>` : ''}
+                    <button onclick="openGiveScoreModal(${member.id})">💸 转账</button>
+                    ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}
+                    ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}
                 </div>
             </div>
         `;
             container.appendChild(div);
         });
-        // 禁用开台按钮，如果无成员
+
         document.getElementById('btnStart').disabled = members.length === 0;
-        document.getElementById('btnAdd').disabled = false;
     }
 
     function resetAll() {
@@ -885,13 +882,14 @@
             members: members.map(member => ({
                 ...member,
                 joinTime: member.joinTime ? member.joinTime.toISOString() : null,
-                undoDisabled: !!member.undoDisabled
+                undoDisabled: !!member.undoDisabled,
+                finalBalance: member.finalBalance // 保存最终费用
             })),
             waterFeeRate,
             waterFeeTarget,
             collectedWaterFee,
             logContent: document.getElementById('log').textContent,
-            isEnded: startTime && isTableEnded() // 只有开过台并且已结束才标记为 ended
+            isEnded: startTime && isTableEnded()
         };
         localStorage.setItem('tableData', JSON.stringify(data));
     }
@@ -911,7 +909,8 @@
             members = (data.members || []).map(member => ({
                 ...member,
                 joinTime: member.joinTime ? new Date(member.joinTime) : null,
-                undoDisabled: !!member.undoDisabled
+                undoDisabled: !!member.undoDisabled,
+                finalBalance: member.finalBalance ?? 0
             }));
 
             document.getElementById('hourlyRate').value = hourlyRate;
