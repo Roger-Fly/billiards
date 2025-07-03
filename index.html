@@ -720,17 +720,17 @@
     function renderPeople() {
         const container = document.getElementById('peopleContainer');
         container.innerHTML = '';
+        const isEnded = isTableEnded();
+
         members.forEach(member => {
             const div = document.createElement('div');
             div.className = 'person';
 
             let costText = '';
 
-            // 如果已关台，使用 finalBalance
-            if (isTableEnded()) {
+            if (isEnded) {
                 costText = `${member.finalBalance?.toFixed(2) || 0} 元`;
             } else {
-                // 否则继续使用动态计算值
                 if (!member.active && !member.fixedCost) {
                     const cost = calculateMemberCost(member);
                     member.fixedCost = cost;
@@ -752,13 +752,15 @@
             </div>
             <div style="text-align:right">
                 <span class="cost">${costText}</span>
-                <div class="actions">
-                    ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}
-                    ${!member.active ? `<button onclick="rejoinMember(${member.id})">✅ 加入</button>` : ''}
-                    <button onclick="openGiveScoreModal(${member.id})">💸 转账</button>
-                    ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}
-                    ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}
-                </div>
+                ${isEnded ? '' : `
+                    <div class="actions">
+                        ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}
+                        ${!member.active ? `<button onclick="rejoinMember(${member.id})">✅ 加入</button>` : ''}
+                        <button onclick="openGiveScoreModal(${member.id})">💸 转账</button>
+                        ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}
+                        ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}
+                    </div>
+                `}
             </div>
         `;
             container.appendChild(div);
