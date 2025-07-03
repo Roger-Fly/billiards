@@ -672,8 +672,10 @@
         const totalTableCost = calculateTotalTableCost();
         localStorage.setItem('lastTotalCost', totalTableCost);
         localStorage.setItem('lastWaterFee', collectedWaterFee);
+        // ✅ 新增：保存总时长（毫秒）
+        const totalDuration = now - startTime;
+        localStorage.setItem('lastTotalDuration', totalDuration.toString());
 
-        // ✅ 弹窗提示并保存数据
         alert(`总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
 
         // 标记为已关台
@@ -684,6 +686,7 @@
             localStorage.setItem('tableData', JSON.stringify(data));
         }
 
+        updateButtonStates()
         updateCosts();
         saveDataToLocalStorage();
     }
@@ -956,6 +959,16 @@
             updateCosts();
             renderPeople();
         }
+    }
+
+    function updateButtonStates() {
+        const isStarted = !!startTime;
+        const isEnded = isTableEnded();
+
+        document.getElementById('btnStart').disabled = isStarted || members.length === 0;
+        document.getElementById('btnEnd').disabled = !isStarted || isEnded;
+        document.getElementById('btnAdd').disabled = isEnded;
+        document.getElementById('btnReset').disabled = false;
     }
 
     function disableInputs() {
