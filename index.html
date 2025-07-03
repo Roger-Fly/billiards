@@ -686,9 +686,9 @@
             localStorage.setItem('tableData', JSON.stringify(data));
         }
 
-        updateButtonStates()
         updateCosts();
         saveDataToLocalStorage();
+        updateButtonStates();
     }
 
     function updateCosts() {
@@ -967,7 +967,7 @@
         const isStarted = !!startTime;
         const isEnded = isTableEnded();
 
-        document.getElementById('btnStart').disabled = isStarted || members.length === 0;
+        document.getElementById('btnStart').disabled = isStarted || isEnded || members.length === 0;
         document.getElementById('btnEnd').disabled = !isStarted || isEnded;
         document.getElementById('btnAdd').disabled = isEnded;
         document.getElementById('btnReset').disabled = false;
@@ -1006,7 +1006,7 @@
     // 页面加载时调用
     window.addEventListener('load', () => {
         loadDataFromLocalStorage();
-
+        updateButtonStates();
         if (!isTableEnded()) {
             if (!timerInterval) timerInterval = setInterval(updateCosts, 1000);
             if (!durationInterval) {
