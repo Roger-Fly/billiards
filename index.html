@@ -906,6 +906,9 @@
 
             hourlyRate = data.hourlyRate;
             startTime = data.startTime ? new Date(data.startTime) : null;
+            if (startTime && isNaN(startTime.getTime())) {
+                startTime = null;
+            }
             scheduledEndTime = data.scheduledEndTime ? new Date(data.scheduledEndTime) : null;
             waterFeeRate = data.waterFeeRate;
             waterFeeTarget = data.waterFeeTarget;
@@ -1000,20 +1003,27 @@
 
     // 判断是否已经关台
     function isTableEnded() {
-        return !startTime || (members.every(m => !m.active));
+        if (!startTime) return members.length > 0;
+        return members.every(m => !m.active);
     }
 
     // 页面加载时调用
     window.addEventListener('load', () => {
         loadDataFromLocalStorage();
         updateButtonStates();
-        if (!isTableEnded()) {
-            if (!timerInterval) timerInterval = setInterval(updateCosts, 1000);
-            if (!durationInterval) {
-                durationInterval = setInterval(() => {
-                    const elapsed = new Date() - startTime;
-                    document.getElementById('durationDisplay').innerHTML = `<p>⏲️ 已开台时间：${formatDuration(elapsed)}</p>`;
-                }, 1000);
+        if (!isTableEnded() && startTime) {
+            const now = new Date();
+            if (startTime <= now) {
+                if (!timerInterval) timerInterval = setInterval(updateCosts, 1000);
+                if (!durationInterval) {
+                    durationInterval = setInterval(() => {
+                        const elapsed = new Date() - startTime;
+                        document.getElementById('durationDisplay').innerHTML = `<p>⏲️ 已开台时间：${formatDuration(elapsed)}</p>`;
+                    }, 1000);
+                }
+            } else {
+                startTime = null;
+                document.getElementById('durationDisplay').innerHTML = `<p>⏲️ 已开台时间：00:00:00</p>`;
             }
         }
     });
