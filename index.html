@@ -333,8 +333,11 @@
         /* 响应式：小屏设备按钮改为单列排列 */
         @media (max-width: 480px) {
             .actions button {
-                flex: 1 1 100%;
-                max-width: 100%;
+                flex: 1 1 calc(50% - 3px); /* 两列布局 */
+                max-width: calc(50% - 3px);
+                padding: 6px 8px; /* 减小内边距 */
+                font-size: 12px; /* 减小字体 */
+                min-height: auto;
             }
 
             .name {
@@ -346,6 +349,7 @@
                 font-size: 13px;
             }
         }
+
         /* 头像样式 */
         .avatar {
             width: 40px;
@@ -446,6 +450,8 @@
     let waterFeeRate = 10;
     let waterFeeTarget = 50;
     let collectedWaterFee = 0;
+    let blurListenersSetup = false;
+    let saveTimeout;
 
     function toggleEndOptions() {
         const mode = document.getElementById("endModeSelect").value;
@@ -979,7 +985,7 @@
             document.getElementById('endModeSelect').disabled = false;
             document.getElementById('endTimeInput').disabled = false;
             document.getElementById('durationInput').disabled = false;
-
+            resetInputFields();
             // ✅ 新增：清除 isEnded 标记
             const dataStr = localStorage.getItem('tableData');
             if (dataStr) {
@@ -991,6 +997,16 @@
             clearLocalStorageData();
         }
         saveDataToLocalStorage();
+    }
+
+    function resetInputFields() {
+        document.getElementById('hourlyRate').value = "";
+        document.getElementById('waterFeeRate').value = "50";
+        document.getElementById('waterFeeTarget').value = "50";
+        document.getElementById('endTimeInput').value = "";
+        document.getElementById('durationInput').value = "";
+        document.getElementById("endModeSelect").value = "manual";
+        toggleEndOptions();
     }
 
     function formatDuration(ms) {
@@ -1061,6 +1077,9 @@
     }
 
     function saveDataToLocalStorage() {
+        const hourlyRate = getNumberInput('hourlyRate');
+        const waterFeeRate = getNumberInput('waterFeeRate');
+        const waterFeeTarget = getNumberInput('waterFeeTarget');
         const data = {
             hourlyRate,
             startTime: startTime ? startTime.toISOString() : null,
@@ -1168,6 +1187,12 @@
         }
     }
 
+    // 封装函数
+    function getNumberInput(id, defaultValue = 0) {
+        const val = parseFloat(document.getElementById(id).value);
+        return isNaN(val) ? defaultValue : val;
+    }
+
     function updateButtonStates() {
         const isStarted = !!startTime;
         const isEnded = isTableEnded();
@@ -1220,11 +1245,65 @@
         return false;
     }
 
+    function debounceSave() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            saveDataToLocalStorage();
+        }, 300); // 300ms 后保存
+    }
+
+    function setupInputBlurListeners() {
+        if (blurListenersSetup) return;
+        blurListenersSetup = true;
+
+        const inputs = document.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            input.addEventListener('blur', debounceSave);
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        loadDataFromLocalStorage();
+        renderPeople();
+        updateButtonStates();
+        setupInputBlurListeners();
+
+        // 如果页面恢复可见性，重新启动计时器
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden && startTime) {
+                if (!timerInterval) {
+                    timerInterval = setInterval(updateCosts, 1000);
+                }
+                updateCosts();
+            } else if (document.hidden && timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        });
+
+        if (!isTableEnded() && startTime) {
+            const now = new Date();
+            if (startTime <= now) {
+                if (!timerInterval) timerInterval = setInterval(updateCosts, 1000);
+                if (!durationInterval) {
+                    durationInterval = setInterval(() => {
+                        const elapsed = new Date() - startTime;
+                        document.getElementById('durationDisplay').innerHTML = `<p>⏲️ 已开台时间：${formatDuration(elapsed)}</p>`;
+                    }, 1000);
+                }
+            } else {
+                startTime = null;
+                document.getElementById('durationDisplay').innerHTML = `<p>⏲️ 已开台时间：00:00:00</p>`;
+            }
+        }
+    });
+
     // 页面加载时调用
     window.addEventListener('load', () => {
         loadDataFromLocalStorage();
         renderPeople();
         updateButtonStates();
+        setupInputBlurListeners();
         if (!isTableEnded() && startTime) {
             const now = new Date();
             if (startTime <= now) {
