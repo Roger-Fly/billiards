@@ -228,6 +228,155 @@
             border-color: #da3838;
         }
 
+        /* 容器最大宽度限制 */
+        .container {
+            max-width: 500px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        /* 成员卡片样式 */
+        .person {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            padding: 16px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        /* 成员之间分割线 */
+        .person:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -10px;
+            height: 1px;
+            background-color: #e0e0e0;
+        }
+
+        /* 成员名称和状态 */
+        .name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .status {
+            font-size: 12px;
+            color: green;
+            margin-left: 8px;
+        }
+
+        /* 余额显示 */
+        .balance {
+            font-weight: bold;
+            color: #dc3545;
+            font-size: 14px;
+            display: block;
+            margin-top: 6px;
+        }
+
+        /* 费用显示 */
+        .cost {
+            font-weight: bold;
+            min-width: 60px;
+            text-align: right;
+            font-size: 14px;
+            color: #28a745;
+            display: block;
+            margin-top: 4px;
+        }
+
+        /* 按钮区域 */
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .actions button {
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 6px 10px;
+            font-size: 13px;
+            color: #333;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            touch-action: manipulation;
+            flex: 1 1 calc(50% - 6px);
+            max-width: calc(50% - 6px);
+            box-sizing: border-box;
+        }
+
+        .actions button:hover {
+            background: linear-gradient(145deg, #f8f8f8, #e9e9e9);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .actions button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .undo-btn {
+            background: linear-gradient(145deg, #e34848, #d50909);
+            color: white;
+            border-color: #da3838;
+        }
+
+        /* 响应式：小屏设备按钮改为单列排列 */
+        @media (max-width: 480px) {
+            .actions button {
+                flex: 1 1 100%;
+                max-width: 100%;
+            }
+
+            .name {
+                font-size: 15px;
+            }
+
+            .balance,
+            .cost {
+                font-size: 13px;
+            }
+        }
+        /* 头像样式 */
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background-color: #2253a1;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* 成员卡片整体浅绿色背景 */
+        .person {
+            background-color: #e6f9e6 !important;
+        }
+
+        /* 分割线 */
+        .person:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -10px;
+            height: 1px;
+            background-color: #cfcfcf; /* 更清晰的分隔线 */
+        }
+
     </style>
 </head>
 <body>
@@ -745,13 +894,19 @@
             const status = member.active ? '在线' : '离线';
 
             div.innerHTML = `
-            <div>
-                <span class="name">${member.name}</span>
-                <span class="status">(${status})</span><br/>
-                <small class="balance">💰 余额：${member.balance.toFixed(2)} 元</small>
-            </div>
-            <div style="text-align:right">
-                <span class="cost">${costText}</span>
+                <div style="display:flex; align-items: center; gap: 12px;">
+                    <div class="avatar">${member.name.charAt(0).toUpperCase()}</div>
+                    <div style="flex:1;">
+                        <div style="display:flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span class="name">${member.name}</span>
+                                <span class="status">(${status})</span>
+                            </div>
+                            <span class="cost">💸 ${costText}</span>
+                        </div>
+                        <small class="balance">💰 余额：${member.balance.toFixed(2)} 元</small>
+                    </div>
+                </div>
                 ${isEnded ? '' : `
                     <div class="actions">
                         ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}
@@ -761,8 +916,7 @@
                         ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}
                     </div>
                 `}
-            </div>
-        `;
+            `;
             container.appendChild(div);
         });
 
@@ -884,6 +1038,9 @@
             hourlyRate,
             startTime: startTime ? startTime.toISOString() : null,
             scheduledEndTime: scheduledEndTime ? scheduledEndTime.toISOString() : null,
+            endMode: document.getElementById("endModeSelect").value,
+            endTime: document.getElementById("endTimeInput").value,
+            duration: document.getElementById("durationInput").value,
             members: members.map(member => ({
                 ...member,
                 joinTime: member.joinTime ? member.joinTime.toISOString() : null,
@@ -927,7 +1084,19 @@
             document.getElementById('log').textContent = data.logContent || '';
 
             const isEnded = data.isEnded === true;
+            if (data.endMode) {
+                const select = document.getElementById("endModeSelect");
+                select.value = data.endMode;
+                toggleEndOptions(); // 显示隐藏区域
 
+                // 恢复输入框内容
+                if (data.endTime) {
+                    document.getElementById("endTimeInput").value = data.endTime;
+                }
+                if (data.duration) {
+                    document.getElementById("durationInput").value = data.duration;
+                }
+            }
             if (startTime && !isEnded) {
                 document.getElementById('btnStart').disabled = true;
                 document.getElementById('btnEnd').disabled = false;
