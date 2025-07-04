@@ -941,6 +941,7 @@
         });
 
         document.getElementById('btnStart').disabled = members.length === 0;
+        updateButtonStates();
     }
 
     function resetAll() {
@@ -956,7 +957,7 @@
             document.getElementById('endTimeInput').value = "";
             document.getElementById('durationInput').value = "";
 
-            // ✅ 恢复按钮和输入框状态
+            document.getElementById('btnAdd').disabled = false;
             document.getElementById('btnStart').disabled = false;
             document.getElementById('btnEnd').disabled = true;
             document.getElementById('hourlyRate').disabled = false;
@@ -965,7 +966,6 @@
             document.getElementById('durationInput').disabled = false;
             document.getElementById('waterFeeRate').disabled = false;
             document.getElementById('waterFeeTarget').disabled = false;
-            document.getElementById('btnAdd').disabled = false;
             document.getElementById('btnReset').disabled = false;
 
             document.getElementById('result').innerHTML = `
@@ -980,6 +980,13 @@
             document.getElementById('endTimeInput').disabled = false;
             document.getElementById('durationInput').disabled = false;
 
+            // ✅ 新增：清除 isEnded 标记
+            const dataStr = localStorage.getItem('tableData');
+            if (dataStr) {
+                const data = JSON.parse(dataStr);
+                data.isEnded = false;
+                localStorage.setItem('tableData', JSON.stringify(data));
+            }
             renderPeople();
             clearLocalStorageData();
         }
@@ -1117,10 +1124,13 @@
                     document.getElementById("durationInput").value = data.duration;
                 }
             }
+
+            // 🔍 根据是否已经开台、是否结束来设置按钮状态
             if (startTime && !isEnded) {
+                // 已开台但未结束
                 document.getElementById('btnStart').disabled = true;
                 document.getElementById('btnEnd').disabled = false;
-                document.getElementById('btnAdd').disabled = false;
+                document.getElementById('btnAdd').disabled = false; // 允许继续添加成员
                 disableInputs();
                 if (!timerInterval) timerInterval = setInterval(updateCosts, 1000);
                 if (!durationInterval) {
@@ -1131,6 +1141,7 @@
                 }
 
             } else if (isEnded) {
+                // 已结束
                 const lastDuration = localStorage.getItem('lastTotalDuration');
                 if (lastDuration) {
                     const durationDisplay = document.getElementById('durationDisplay');
@@ -1141,11 +1152,13 @@
                 document.getElementById('btnAdd').disabled = true;
                 document.getElementById('btnReset').disabled = false;
                 disableInputs();
+
             } else {
-                // ✅ 默认状态：启用所有输入框
-                document.getElementById('btnStart').disabled = false;
+                // 未开台，保持初始状态
+                document.getElementById('btnStart').disabled = members.length === 0;
                 document.getElementById('btnEnd').disabled = true;
-                document.getElementById('btnAdd').disabled = false;
+                document.getElementById('btnAdd').disabled = false; // 允许继续添加成员
+                document.getElementById('btnReset').disabled = false;
 
                 enableInputs();
             }
@@ -1159,9 +1172,16 @@
         const isStarted = !!startTime;
         const isEnded = isTableEnded();
 
+        // 开台按钮：已开始 或 已结束 → 禁用；否则根据是否有成员决定是否启用
         document.getElementById('btnStart').disabled = isStarted || isEnded || members.length === 0;
+
+        // 关台按钮：未开始 或 已结束 → 禁用
         document.getElementById('btnEnd').disabled = !isStarted || isEnded;
+
+        // 添加成员按钮：已结束 → 禁用
         document.getElementById('btnAdd').disabled = isEnded;
+
+        // 重置按钮始终可用
         document.getElementById('btnReset').disabled = false;
     }
 
@@ -1192,13 +1212,18 @@
 
     // 判断是否已经关台
     function isTableEnded() {
-        if (!startTime) return members.length > 0;
-        return members.every(m => !m.active);
+        const dataStr = localStorage.getItem('tableData');
+        if (dataStr) {
+            const data = JSON.parse(dataStr);
+            return data.isEnded === true;
+        }
+        return false;
     }
 
     // 页面加载时调用
     window.addEventListener('load', () => {
         loadDataFromLocalStorage();
+        renderPeople();
         updateButtonStates();
         if (!isTableEnded() && startTime) {
             const now = new Date();
