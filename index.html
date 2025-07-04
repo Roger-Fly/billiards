@@ -871,6 +871,18 @@
         container.innerHTML = '';
         const isEnded = isTableEnded();
 
+        // 获取当前所有成员的余额
+        const balances = members.map(m => m.balance);
+        const maxBalance = Math.max(...balances);
+        const minBalance = Math.min(...balances);
+
+        // 判断是否有多个成员拥有相同的最高或最低余额
+        const maxCount = balances.filter(b => b === maxBalance).length;
+        const minCount = balances.filter(b => b === minBalance).length;
+
+        // 判断是否至少有两个成员
+        const showEmoji = members.length >= 2;
+
         members.forEach(member => {
             const div = document.createElement('div');
             div.className = 'person';
@@ -893,30 +905,38 @@
 
             const status = member.active ? '在线' : '离线';
 
+            // 只有在唯一最大/最小时才显示 emoji
+            const isMaxUnique = maxCount === 1 && member.balance === maxBalance;
+            const isMinUnique = minCount === 1 && member.balance === minBalance;
+
             div.innerHTML = `
-                <div style="display:flex; align-items: center; gap: 12px;">
-                    <div class="avatar">${member.name.charAt(0).toUpperCase()}</div>
-                    <div style="flex:1;">
-                        <div style="display:flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <span class="name">${member.name}</span>
-                                <span class="status">(${status})</span>
-                            </div>
-                            <span class="cost">💸 ${costText}</span>
+            <div style="display:flex; align-items: center; gap: 12px;">
+                <div class="avatar">${member.name.charAt(0).toUpperCase()}</div>
+                <div style="flex:1;">
+                    <div style="display:flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span class="name">
+                                ${member.name}
+                                ${showEmoji && isMaxUnique ? ' 🔥' : ''}
+                                ${showEmoji && isMinUnique ? ' 💧' : ''}
+                            </span>
+                            <span class="status">(${status})</span>
                         </div>
-                        <small class="balance">💰 余额：${member.balance.toFixed(2)} 元</small>
+                        <span class="cost">💸 ${costText}</span>
                     </div>
+                    <small class="balance">💰 余额：${member.balance.toFixed(2)} 元</small>
                 </div>
-                ${isEnded ? '' : `
-                    <div class="actions">
-                        ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}
-                        ${!member.active ? `<button onclick="rejoinMember(${member.id})">✅ 加入</button>` : ''}
-                        <button onclick="openGiveScoreModal(${member.id})">💸 转账</button>
-                        ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}
-                        ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}
-                    </div>
-                `}
-            `;
+            </div>
+            ${isEnded ? '' : `
+                <div class="actions">
+                    ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}
+                    ${!member.active ? `<button onclick="rejoinMember(${member.id})">✅ 加入</button>` : ''}
+                    <button onclick="openGiveScoreModal(${member.id})">💸 转账</button>
+                    ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}
+                    ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}
+                </div>
+            `}
+        `;
             container.appendChild(div);
         });
 
