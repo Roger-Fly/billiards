@@ -129,18 +129,56 @@
             color: var(--secondary);
             font-size: 15px;
         }
-
+        /* 修复输入框与图标重叠问题 */
         .input-group {
             position: relative;
+            margin-bottom: 15px; /* 确保有足够间距 */
         }
 
         .input-group i {
             position: absolute;
-            left: 15px;
+            left: 12px; /* 调整图标左间距 */
             top: 50%;
             transform: translateY(-50%);
+            z-index: 2; /* 确保图标在上层 */
             color: var(--accent);
-            font-size: 18px;
+            font-size: 16px; /* 适当缩小图标 */
+        }
+
+        /* 调整输入框内边距 */
+        #inputName {
+            padding: 10px 15px 10px 40px !important; /* 左内边距加大 */
+            width: 100%;
+            font-size: 14px;
+            border: 1px solid #ddd; /* 添加边框更清晰 */
+            border-radius: 8px;
+            box-shadow: none;
+        }
+
+        /* 移动端特别调整 */
+        @media (max-width: 480px) {
+            .input-group i {
+                left: 10px;
+                font-size: 14px;
+            }
+
+            #inputName {
+                padding: 8px 12px 8px 36px !important;
+                font-size: 13px;
+            }
+
+            /* 确保模态框足够宽 */
+            #inputModal .modal {
+                width: 90%;
+                min-width: 280px;
+            }
+        }
+
+        /* 输入框聚焦状态 */
+        #inputName:focus {
+            border-color: var(--accent);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
 
         input[type="number"],
@@ -779,14 +817,14 @@
         <div class="modal-content">
             <div class="input-group">
                 <i class="fas fa-signature"></i>
-                <input type="text" id="inputName" placeholder="输入成员姓名"/>
+                <input type="text" id="inputName" placeholder="输入成员姓名" autocomplete="off"/>
             </div>
         </div>
         <div class="modal-actions">
-            <button onclick="confirmInput()" style="background: var(--success); color: white;">
+            <button onclick="confirmInput()" style="background: var(--success);">
                 <i class="fas fa-check"></i> 确认
             </button>
-            <button onclick="cancelInput()" style="background: var(--text-light); color: white;">
+            <button onclick="cancelInput()" style="background: var(--text-light);">
                 <i class="fas fa-times"></i> 取消
             </button>
         </div>
