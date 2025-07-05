@@ -474,6 +474,12 @@
         logDiv.scrollTop = logDiv.scrollHeight;
     }
 
+    function logUseDate(date, msg) {
+        const logDiv = document.getElementById('log');
+        logDiv.textContent += `[${date.toLocaleTimeString()}] ${msg}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
     function addPerson() {
         document.getElementById('inputModal').style.display = 'flex';
         const input = document.getElementById('inputName');
@@ -804,6 +810,7 @@
 
         if (timerInterval) clearInterval(timerInterval); // 防止重复启动
         timerInterval = setInterval(updateCosts, 1000);
+        logUseDate(startTime, `开台成功`);
         speak("我在小铁很想虐你，就是战别BB！");
         saveDataToLocalStorage();
     }
@@ -836,7 +843,7 @@
         const totalDuration = now - startTime;
         localStorage.setItem('lastTotalDuration', totalDuration.toString());
 
-        log(`关台成功，总费用：${totalTableCost.toFixed(2)} 元\n`);
+        logUseDate(now, `关台成功，总费用：${totalTableCost.toFixed(2)} 元\n`);
         speak(`关台成功，总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
         alert(`总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
 
