@@ -4,441 +4,798 @@
     <meta charset="UTF-8">
     <title>台球分摊&计分</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
     <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #f4f6f9;
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --accent-alt: #1abc9c;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #1a252f;
+            --text: #333;
+            --text-light: #7f8c8d;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            --transition: all 0.3s ease;
+        }
+
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #2c3e50, #1a1a2e);
+            color: var(--text);
+            min-height: 100vh;
             padding: 20px;
+            line-height: 1.6;
         }
 
         .container {
-            max-width: 500px;
-            margin: auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            padding: 20px;
+            max-width: 600px;
+            margin: 20px auto;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
         }
 
-        h2 {
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-alt));
+            z-index: 2;
+        }
+
+        .header {
+            background: linear-gradient(120deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 25px 20px;
             text-align: center;
-            color: #333;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: var(--card-bg);
+            border-radius: 50% 50% 0 0;
+        }
+
+        .header h2 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .header h2 i {
+            color: var(--accent-alt);
+            font-size: 32px;
+            animation: pulse 2s infinite;
+        }
+
+        .content {
+            padding: 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--accent-alt);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
         }
 
         label {
             display: block;
-            margin-top: 10px;
-            font-weight: bold;
-            color: #555;
-            font-size: 14px;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--secondary);
+            font-size: 15px;
         }
 
-        input[type="number"], input[type="datetime-local"] {
-            width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 14px;
+        .input-group {
+            position: relative;
         }
 
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--accent);
+            font-size: 18px;
+        }
+
+        input[type="number"],
+        input[type="datetime-local"],
         select {
             width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
+            padding: 14px 20px 14px 50px;
+            border: none;
+            background: rgba(236, 240, 241, 0.6);
+            border-radius: 12px;
+            font-size: 16px;
+            transition: var(--transition);
+            color: var(--text);
+            border: 2px solid transparent;
+        }
+
+        input[type="number"]:focus,
+        input[type="datetime-local"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
+        }
+
+        .options-container {
+            background: rgba(236, 240, 241, 0.6);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .result-container {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(26, 188, 156, 0.1));
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin: 10px 0;
+            text-align: center;
+            border: 1px dashed rgba(52, 152, 219, 0.3);
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px; /* 减小间距 */
+            margin: 8px 0; /* 减小外边距 */
+        }
+
+        .result-icon {
+            width: 30px;
+            height: 30px;
+            background: var(--accent);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .result-text {
             font-size: 14px;
+            font-weight: 500;
+            color: var(--secondary);
+        }
+
+        .result-text span {
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
         }
 
         button {
-            margin-top: 10px;
-            padding: 10px 15px;
+            padding: 16px 20px;
             font-size: 16px;
-            cursor: pointer;
+            font-weight: 600;
             border: none;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-            width: 100%;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        button i {
+            font-size: 20px;
         }
 
         button:hover {
-            opacity: 0.9;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button[disabled] {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        #btnAdd {
+            display: block; /* 改为块级元素 */
+            margin: 0 auto; /* 自动外边距实现水平居中 */
+            width: 200px; /* 设置固定宽度，可根据需要调整 */
+            text-align: center; /* 文字居中 */
         }
 
         .btn-add {
-            background-color: #007bff;
+            background: linear-gradient(135deg, var(--accent), #2980b9);
             color: white;
         }
 
         .btn-start {
-            background-color: #28a745;
+            background: linear-gradient(135deg, var(--success), #27ae60);
             color: white;
         }
 
         .btn-end {
-            background-color: #dc3545;
+            background: linear-gradient(135deg, var(--danger), #c0392b);
             color: white;
         }
 
         .btn-reset {
-            background-color: #ffc107;
-            color: black;
+            background: linear-gradient(135deg, var(--warning), #e67e22);
+            color: white;
         }
 
-        .name {
-            font-weight: bold;
+        .people-container {
+            margin: 25px 0;
         }
 
-        .status {
-            font-size: 12px;
-            color: green;
+        .person {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
         }
 
-        .point {
-            font-weight: bold;
-            min-width: 60px;
-            text-align: right;
-            color: #dc3545; /* 红色更醒目 */
-            font-size: 16px;
-            margin-top: 4px;
+        .person:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
         }
 
-        .cost {
-            font-weight: bold;
-            min-width: 60px;
-            text-align: right;
-        }
-
-        .actions {
+        .person-header {
             display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .avatar {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+            color: white;
+            font-weight: 700;
+            font-size: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .person-info {
+            flex: 1;
+        }
+
+        .person-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
             gap: 8px;
         }
 
-        .log {
-            margin-top: 15px;
-            white-space: pre-wrap;
-            background-color: #f8f9fa;
-            padding: 10px;
-            border-radius: 6px;
-            height: 100px;
-            overflow-y: auto;
-            font-size: 12px;
-            color: #555;
+        .status {
+            font-size: 13px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: var(--success);
+            color: white;
+            font-weight: 500;
         }
 
-        .result {
-            margin-top: 15px;
-            font-size: 16px;
-            font-weight: bold;
+        .status.offline {
+            background: var(--text-light);
+        }
+
+        .person-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+        }
+
+        .stat-item {
             text-align: center;
-            color: #333;
+            padding: 0 10px;
         }
 
-        /* 弹窗 */
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 3px;
+        }
+
+        .cost {
+            color: var(--success);
+        }
+
+        .point {
+            color: var(--accent);
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .actions button {
+            padding: 12px;
+            font-size: 14px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .actions button i {
+            font-size: 16px;
+        }
+
+        .undo-btn {
+            background: linear-gradient(135deg, var(--danger), #c0392b);
+        }
+
+        .log-container {
+            margin-top: 25px;
+        }
+
+        .log-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .log {
+            background: rgba(236, 240, 241, 0.6);
+            border-radius: 12px;
+            padding: 15px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 13px;
+            color: var(--text);
+            font-family: 'Courier New', monospace;
+            line-height: 1.8;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            white-space: pre-wrap;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed rgba(0, 0, 0, 0.1);
+        }
+
+        .log-time {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
         .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.7);
             z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(5px);
         }
 
         .modal {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
+            padding: 30px;
+            border-radius: 20px;
             width: 90%;
-            max-width: 400px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            max-width: 450px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+            position: relative;
         }
 
         .modal h3 {
             margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--primary);
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .modal button {
-            margin-top: 10px;
-            width: auto;
-            padding: 8px 15px;
+        .modal h3 i {
+            color: var(--accent);
+        }
+
+        .modal-content {
+            margin: 20px 0;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .modal-actions button {
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
         }
 
         .history-modal {
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
+            padding: 15px;
+            background: rgba(236, 240, 241, 0.5);
+            border-radius: 12px;
+            margin: 15px 0;
         }
 
-        .undo-btn {
-            background-color: #6c757d;
-            color: white;
-            font-size: 14px;
+        .history-entry {
+            padding: 10px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
         }
 
-        button[disabled] {
-            background-color: #adb5bd !important;
-            color: #fff !important;
-            cursor: not-allowed;
-            opacity: 1;
+        .history-entry:last-child {
+            border-bottom: none;
         }
 
-        .actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 8px;
-        }
-
-        .actions button {
-            background: linear-gradient(145deg, #ffffff, #f0f0f0);
-            border: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 8px 12px;
-            font-size: 15px;
-            min-height: 40px;
-            color: #333;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            touch-action: manipulation;
-            flex: 1 1 calc(50% - 6px);
-            max-width: calc(50% - 6px);
-            box-sizing: border-box;
-        }
-
-        .actions button:hover {
-            background: linear-gradient(145deg, #f8f8f8, #e9e9e9);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .actions button:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .undo-btn {
-            background: linear-gradient(145deg, #e34848, #d50909);
-            color: white;
-            border-color: #da3838;
-        }
-
-        /* 容器最大宽度限制 */
-        .container {
-            max-width: 500px;
-            margin: auto;
+        footer {
+            text-align: center;
             padding: 20px;
-        }
-
-        /* 成员卡片样式 */
-        .person {
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-            padding: 16px;
-            margin-bottom: 16px;
-            position: relative;
-        }
-
-        /* 成员之间分割线 */
-        .person:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: -10px;
-            height: 1px;
-            background-color: #e0e0e0;
-        }
-
-        /* 成员名称和状态 */
-        .name {
-            font-weight: bold;
-            font-size: 16px;
-            color: #333;
-        }
-
-        .status {
-            font-size: 12px;
-            color: green;
-            margin-left: 8px;
-        }
-
-        /* 积分显示 */
-        .point {
-            font-weight: bold;
-            color: #dc3545;
+            color: rgba(255, 255, 255, 0.7);
             font-size: 14px;
-            display: block;
-            margin-top: 6px;
+            margin-top: 20px;
         }
 
-        /* 费用显示 */
-        .cost {
-            font-weight: bold;
-            min-width: 60px;
-            text-align: right;
-            font-size: 14px;
-            color: #28a745;
-            display: block;
-            margin-top: 4px;
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
         }
 
-        /* 按钮区域 */
-        .actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 10px;
-        }
+        @media (max-width: 768px) {
+            /* 通用按钮样式调整 */
+            button {
+                padding: 10px 12px !important;  /* 从16px 20px减小 */
+                font-size: 14px !important;      /* 从16px减小 */
+            }
 
-        .actions button {
-            background: linear-gradient(145deg, #ffffff, #f0f0f0);
-            border: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 6px 10px;
-            font-size: 13px;
-            color: #333;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            touch-action: manipulation;
-            flex: 1 1 calc(50% - 6px);
-            max-width: calc(50% - 6px);
-            box-sizing: border-box;
-        }
+            button i {
+                font-size: 16px !important;     /* 从20px减小 */
+            }
 
-        .actions button:hover {
-            background: linear-gradient(145deg, #f8f8f8, #e9e9e9);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        }
+            /* 特定按钮组调整 */
+            .button-group {
+                gap: 10px;                      /* 从15px减小 */
+                margin: 15px 0;                 /* 从20px 0减小 */
+            }
 
-        .actions button:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
+            /* 添加成员按钮单独调整 */
+            #btnAdd {
+                padding: 10px 12px !important;
+                font-size: 14px !important;
+                margin: 10px auto;              /* 上下间距减小 */
+                width: 180px;                   /* 适当减小宽度 */
+            }
 
-        .undo-btn {
-            background: linear-gradient(145deg, #e34848, #d50909);
-            color: white;
-            border-color: #da3838;
-        }
-
-        /* 响应式：小屏设备按钮改为单列排列 */
-        @media (max-width: 480px) {
+            /* 操作按钮调整 */
             .actions button {
-                flex: 1 1 calc(50% - 3px); /* 两列布局 */
-                max-width: calc(50% - 3px);
-                padding: 6px 8px; /* 减小内边距 */
-                font-size: 12px; /* 减小字体 */
-                min-height: auto;
-            }
-
-            .name {
-                font-size: 15px;
-            }
-
-            .point,
-            .cost {
-                font-size: 13px;
+                padding: 8px !important;        /* 从12px减小 */
+                font-size: 12px !important;     /* 从14px减小 */
             }
         }
 
-        /* 头像样式 */
-        .avatar {
-            width: 40px;
-            height: 40px;
-            background-color: #2253a1;
-            color: white;
-            font-weight: bold;
-            font-size: 18px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
+        @media (max-width: 480px) {
+            /* 成员卡片整体更紧凑 */
+            .person {
+                padding: 12px; /* 减少内边距 */
+                margin-bottom: 12px; /* 减少外边距 */
+            }
 
-        /* 成员卡片整体浅绿色背景 */
-        .person {
-            background-color: #e6f9e6 !important;
-        }
+            /* 头像和名称保持在同一行 */
+            .person-header {
+                flex-direction: row; /* 保持行排列 */
+                align-items: center;
+                gap: 10px; /* 减少间距 */
+                margin-bottom: 8px; /* 减少底部间距 */
+            }
 
-        /* 分割线 */
-        .person:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: -10px;
-            height: 1px;
-            background-color: #cfcfcf; /* 更清晰的分隔线 */
-        }
+            /* 头像尺寸缩小 */
+            .avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 14px;
+            }
 
+            /* 名称和状态调整 */
+            .person-name {
+                font-size: 16px; /* 适当减小字号 */
+            }
+
+            .status {
+                font-size: 11px;
+                padding: 2px 8px;
+            }
+
+            /* 费用和积分保持在同一行 */
+            .person-stats {
+                flex-direction: row; /* 保持行排列 */
+                gap: 8px; /* 适当间距 */
+                margin-top: 5px;
+            }
+
+            .stat-item {
+                text-align: left;
+                padding: 0;
+            }
+
+            .stat-label {
+                font-size: 11px; /* 减小标签字号 */
+            }
+
+            .stat-value {
+                font-size: 14px; /* 减小数值字号 */
+                margin-top: 2px;
+            }
+
+            /* 操作按钮两两一行 */
+            .actions {
+                grid-template-columns: repeat(2, 1fr); /* 两列布局 */
+                gap: 8px;
+                margin-top: 10px;
+            }
+
+            .actions button {
+                padding: 8px; /* 减小按钮内边距 */
+                font-size: 12px; /* 减小按钮字号 */
+                border-radius: 8px;
+            }
+
+            .actions button i {
+                font-size: 12px; /* 减小图标大小 */
+            }
+        }
     </style>
 </head>
 <body>
-
 <div class="container">
-
-    <h2>🎱 台球分摊&计分</h2>
-
-    <label for="hourlyRate">每小时费用（元）：</label>
-    <input type="number" id="hourlyRate" min="0" step="0.01" placeholder="例如：30">
-
-    <label for="endModeSelect">选择关台方式：</label>
-    <select id="endModeSelect" onchange="toggleEndOptions()">
-        <option value="manual">手动关台</option>
-        <option value="time">指定时间关台（勿关）</option>
-        <option value="duration">时长关台（勿关）</option>
-    </select>
-
-    <div id="timeOption" style="display:none;">
-        <label for="endTimeInput">请输入关台时间：</label>
-        <input type="datetime-local" id="endTimeInput">
+    <div class="header">
+        <h2><i class="fas fa-billiards"></i> 台球分摊计分系统</h2>
+        <p>公平分摊费用，精准记录得分</p>
     </div>
 
-    <div id="durationOption" style="display:none;">
-        <label for="durationInput">多少分钟后关台：</label>
-        <input type="number" id="durationInput" min="1" placeholder="例如：60">
+    <div class="content">
+        <div class="section">
+            <div class="section-title">
+                <i class="fas fa-cog"></i> 基础设置
+            </div>
+
+            <div class="form-group">
+                <label for="hourlyRate">每小时费用（元）：</label>
+                <div class="input-group">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <input type="number" id="hourlyRate" min="0" step="0.01" placeholder="例如：30">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="endModeSelect">选择关台方式：</label>
+                <div class="input-group">
+                    <i class="fas fa-stopwatch"></i>
+                    <select id="endModeSelect" onchange="toggleEndOptions()">
+                        <option value="manual">手动关台</option>
+                        <option value="time">指定时间关台</option>
+                        <option value="duration">时长关台</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="timeOption" class="options-container" style="display:none;">
+                <div class="form-group">
+                    <label for="endTimeInput">请输入关台时间：</label>
+                    <div class="input-group">
+                        <i class="fas fa-clock"></i>
+                        <input type="datetime-local" id="endTimeInput">
+                    </div>
+                </div>
+            </div>
+
+            <div id="durationOption" class="options-container" style="display:none;">
+                <div class="form-group">
+                    <label for="durationInput">多少分钟后关台：</label>
+                    <div class="input-group">
+                        <i class="fas fa-hourglass-half"></i>
+                        <input type="number" id="durationInput" min="1" placeholder="例如：60">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="waterFeeRate">抽成比例（%）：</label>
+                <div class="input-group">
+                    <i class="fas fa-percentage"></i>
+                    <input type="number" id="waterFeeRate" min="0" max="100" step="0.01" value="50">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="waterFeeTarget">水费目标积分：</label>
+                <div class="input-group">
+                    <i class="fas fa-bullseye"></i>
+                    <input type="number" id="waterFeeTarget" min="0" step="0.01" value="50">
+                </div>
+            </div>
+        </div>
+
+        <div class="result-container">
+            <div class="result-item">
+                <div class="result-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="result-text" id="durationDisplay">
+                    已开台时间：<span>00:00:00</span>
+                </div>
+            </div>
+
+            <div class="result-item">
+                <div class="result-icon">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <div class="result-text">
+                    当前总费用：<span id="totalCost">0.00</span> 元
+                </div>
+            </div>
+
+            <div class="result-item">
+                <div class="result-icon">
+                    <i class="fas fa-tint"></i>
+                </div>
+                <div class="result-text">
+                    当前水费：<span id="waterFee">0.00</span> 分
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-add" id="btnAdd" onclick="addPerson()">
+            <i class="fas fa-user-plus"></i> 添加成员
+        </button>
+
+        <div id="peopleContainer" class="people-container"></div>
+
+        <div class="button-group">
+            <button class="btn-start" onclick="startTable()" id="btnStart">
+                <i class="fas fa-play"></i> 开台
+            </button>
+
+            <button class="btn-end" onclick="endTable()" id="btnEnd" disabled>
+                <i class="fas fa-stop"></i> 关台
+            </button>
+
+            <button class="btn-reset" id="btnReset" onclick="resetAll()">
+                <i class="fas fa-redo"></i> 重置
+            </button>
+        </div>
+
+        <div class="log-container">
+            <div class="log-header">
+                <div class="section-title">
+                    <i class="fas fa-scroll"></i> 操作明细日志
+                </div>
+                <button onclick="clearLog()" style="padding: 8px 12px; font-size: 13px; background: var(--text-light);">
+                    <i class="fas fa-trash"></i> 清空
+                </button>
+            </div>
+            <div class="log" id="log"></div>
+        </div>
     </div>
-
-    <label for="waterFeeRate">抽成比例（%）：</label>
-    <input type="number" id="waterFeeRate" min="0" max="100" step="0.01" value="50"/>
-
-    <label for="waterFeeTarget">水费目标积分：</label>
-    <input type="number" id="waterFeeTarget" min="0" step="0.01" value="50"/>
-
-    <div class="result" id="durationDisplay">
-        <p>⏲️ 已开台时间：00:00:00</p>
-    </div>
-
-    <div class="result" id="result">
-        <p>💳 当前总费用：0.00 元</p>
-        <p>🫖 当前水费：0.00 分</p>
-    </div>
-
-    <button class="btn-add" id="btnAdd" onclick="addPerson()">🙋‍♂ 添加成员</button>
-    <div id="peopleContainer"></div>
-
-    <button class="btn-start" onclick="startTable()" id="btnStart">🔥 开台</button>
-    <button class="btn-end" onclick="endTable()" id="btnEnd" disabled>⛔ 关台</button>
-    <button class="btn-reset" id="btnReset" onclick="resetAll()">♻️ 重置</button>
-
-    <h3 style="font-size:14px;">操作明细日志</h3>
-    <div class="log" id="log"></div>
-
 </div>
 
 <!-- 弹窗 -->
 <div id="giveScoreModal" class="modal-overlay" style="display:none;"></div>
 <div id="historyModal" class="modal-overlay" style="display:none;"></div>
+
+<!-- 自定义输入模态框 -->
+<div id="inputModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+        <h3><i class="fas fa-user"></i> 添加新成员</h3>
+        <div class="modal-content">
+            <div class="input-group">
+                <i class="fas fa-signature"></i>
+                <input type="text" id="inputName" placeholder="输入成员姓名"/>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button onclick="confirmInput()" style="background: var(--success); color: white;">
+                <i class="fas fa-check"></i> 确认
+            </button>
+            <button onclick="cancelInput()" style="background: var(--text-light); color: white;">
+                <i class="fas fa-times"></i> 取消
+            </button>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>© 2025 台球分摊计分系统 | 让每一分都算得清清楚楚</p>
+</footer>
 
 <script>
     let hourlyRate = 0;
@@ -485,25 +842,6 @@
         const input = document.getElementById('inputName');
         input.value = '';
         input.focus();
-        if (name) {
-            const id = Date.now() + Math.floor(Math.random() * 1000);
-            const member = {
-                id: id,
-                name: name,
-                joinTime: startTime ? new Date() : null,
-                totalTime: 0,
-                point: 0,
-                finalBalance: 0,
-                active: startTime ? true : false,
-                history: [],
-                undoDisabled: false
-            };
-            members.push(member);
-            log(`${member.name} 加入`);
-            speak(`${member.name} 加入房间`)
-            renderPeople();
-        }
-        saveDataToLocalStorage();
     }
 
     function confirmInput() {
@@ -544,18 +882,14 @@
             const activeMembers = members.filter(m => m.active);
 
             if (activeMembers.length === 1) {
-                // 用户选择不关台：不改变 active 状态，保持在线
-                // 可以提示不能退出
                 alert("至少需要一人在线，无法退出");
                 return;
             } else {
-                // 非最后一个成员，正常退出
                 member.totalTime += duration;
                 member.joinTime = null;
                 member.active = false;
             }
 
-            // 保存费用
             member.fixedCost = calculateMemberCost(member);
 
             log(`${member.name} 退出房间`);
@@ -570,7 +904,7 @@
         if (member && !member.active && startTime) {
             member.joinTime = new Date();
             member.active = true;
-            delete member.fixedCost; // 删除 fixedCost，恢复动态计算
+            delete member.fixedCost;
             log(`${member.name} 再次加入房间`);
             speak(`${member.name} 再次加入房间`);
             renderPeople();
@@ -591,16 +925,28 @@
         }
 
         const modalHTML = `
-            <div class="modal">
-                <h3>掏分操作 - 来自：${fromMember.name}</h3>
-                <select id="targetSelect">${options}</select>
-                <input type="number" id="scoreInput" placeholder="输入积分" min="0.01" step="0.01" />
-                <div style="margin-top:10px;text-align:right;">
-                    <button onclick="submitGiveScore(${fromId})">提交</button>
-                    <button onclick="closeModal()">取消</button>
+                <div class="modal">
+                    <h3><i class="fas fa-coins"></i> 掏分操作 - 来自：${fromMember.name}</h3>
+                    <div class="modal-content">
+                        <div class="form-group">
+                            <label for="targetSelect">选择目标成员</label>
+                            <select id="targetSelect" class="input-group">${options}</select>
+                        </div>
+                        <div class="form-group">
+                            <label for="scoreInput">输入积分</label>
+                            <input type="number" id="scoreInput" placeholder="输入积分" min="0.01" step="0.01" />
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button onclick="submitGiveScore(${fromId})" style="background: var(--success);">
+                            <i class="fas fa-check"></i> 提交
+                        </button>
+                        <button onclick="closeModal()" style="background: var(--text-light);">
+                            <i class="fas fa-times"></i> 取消
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
 
         const modalOverlay = document.getElementById('giveScoreModal');
         modalOverlay.innerHTML = modalHTML;
@@ -632,7 +978,6 @@
             return;
         }
 
-        // 获取抽成比例与目标金额
         const rate = parseFloat(document.getElementById('waterFeeRate').value) / 100;
         const target = parseFloat(document.getElementById('waterFeeTarget').value);
 
@@ -658,11 +1003,9 @@
             log("已达水费上限，停止抽成");
         }
 
-        // 金钱操作
         fromMember.point -= amount;
         toMember.point += actualAmount;
 
-        // 记录交易历史
         const timestamp = new Date().toLocaleString();
         fromMember.history.push({type: 'out', amount, to: toMember.name, fee, timestamp});
         toMember.history.push({type: 'in', amount: actualAmount, from: fromMember.name, timestamp});
@@ -688,12 +1031,18 @@
         }).join('\n');
 
         const modalHTML = `
-            <div class="modal history-modal">
-                <h3>${member.name} 的交易记录</h3>
-                <pre style="white-space: pre-wrap;">${historyList || '暂无记录'}</pre>
-                <button onclick="closeHistoryModal()">关闭</button>
-            </div>
-        `;
+                <div class="modal">
+                    <h3><i class="fas fa-history"></i> ${member.name} 的交易记录</h3>
+                    <div class="history-modal">
+                        <pre style="white-space: pre-wrap;">${historyList || '暂无记录'}</pre>
+                    </div>
+                    <div class="modal-actions">
+                        <button onclick="closeHistoryModal()" style="background: var(--accent);">
+                            <i class="fas fa-times"></i> 关闭
+                        </button>
+                    </div>
+                </div>
+            `;
 
         const modalOverlay = document.getElementById('historyModal');
         modalOverlay.innerHTML = modalHTML;
@@ -707,14 +1056,13 @@
     function calculateTotalTableCost() {
         if (!startTime) return 0;
         const now = new Date();
-        const totalTimeInHours = (now - startTime) / (1000 * 60 * 60); // 换算为小时
+        const totalTimeInHours = (now - startTime) / (1000 * 60 * 60);
         return hourlyRate * totalTimeInHours;
     }
 
     function calculateMemberCost(member) {
         const totalTableCost = calculateTotalTableCost();
 
-        // 计算所有成员总在线时间（毫秒）
         let totalActiveTime = 0;
         members.forEach(m => {
             const currentSession = m.active ? (new Date() - m.joinTime) : 0;
@@ -723,7 +1071,6 @@
 
         if (totalActiveTime === 0) return 0;
 
-        // 当前成员总在线时间
         const memberCurrentSession = member.active ? (new Date() - member.joinTime) : 0;
         const memberTotalTime = member.totalTime + memberCurrentSession;
 
@@ -736,7 +1083,6 @@
             speak("至少需要添加一名成员才能开台");
             return;
         }
-        hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
         hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
         if (isNaN(hourlyRate) || hourlyRate <= 0) {
             alert("请输入正确的每小时费用！");
@@ -784,14 +1130,14 @@
 
         startTime = new Date();
         const durationDisplay = document.getElementById('durationDisplay');
-        durationDisplay.innerHTML = `<p>⏲️ 已开台时间：00:00:00</p>`;
+        durationDisplay.innerHTML = `<p>已开台时间：00:00:00</p>`;
 
-        if (durationInterval) clearInterval(durationInterval); // 清除旧计时器
+        if (durationInterval) clearInterval(durationInterval);
 
         durationInterval = setInterval(() => {
             if (!startTime) return;
             const elapsed = new Date() - startTime;
-            durationDisplay.innerHTML = `<p>⏲️ 已开台时间：${formatDuration(elapsed)}</p>`;
+            document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
         }, 1000);
 
         document.getElementById('btnStart').disabled = true;
@@ -808,7 +1154,7 @@
             }
         });
 
-        if (timerInterval) clearInterval(timerInterval); // 防止重复启动
+        if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(updateCosts, 1000);
         logUseDate(startTime, `开台成功`);
         speak("我在小铁很想虐你，就是战别BB！");
@@ -831,15 +1177,13 @@
             }
         });
 
-        // 🔐 计算并保存最终费用
         members.forEach(member => {
-            member.finalBalance = calculateMemberCost(member); // 保存最终费用
+            member.finalBalance = calculateMemberCost(member);
         });
 
         const totalTableCost = calculateTotalTableCost();
         localStorage.setItem('lastTotalCost', totalTableCost);
         localStorage.setItem('lastWaterFee', collectedWaterFee);
-        // ✅ 新增：保存总时长（毫秒）
         const totalDuration = now - startTime;
         localStorage.setItem('lastTotalDuration', totalDuration.toString());
 
@@ -847,7 +1191,6 @@
         speak(`关台成功，总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
         alert(`总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
 
-        // 标记为已关台
         const dataStr = localStorage.getItem('tableData');
         if (dataStr) {
             const data = JSON.parse(dataStr);
@@ -859,34 +1202,16 @@
         saveDataToLocalStorage();
         updateButtonStates();
         setTimeout(() => {
-            isEnding = false; // 重置标志位
-        }, 60000); // 60秒后允许再次调用
+            isEnding = false;
+        }, 60000);
     }
 
     function updateCosts() {
         renderPeople();
 
-        const resultDiv = document.getElementById('result');
-
-        // 如果已关台，使用最后一次保存的费用，不再动态计算
-        if (!startTime || isTableEnded()) {
-            const savedTotalCost = parseFloat(localStorage.getItem('lastTotalCost')) || 0;
-            const savedWaterFee = parseFloat(localStorage.getItem('lastWaterFee')) || 0;
-
-            resultDiv.innerHTML = `
-            <p>💳 当前总费用：${savedTotalCost.toFixed(2)} 元</p>
-            <p>🫖 当前水费：${savedWaterFee.toFixed(2)} 分</p>
-        `;
-        } else {
-            const totalTableCost = calculateTotalTableCost();
-            localStorage.setItem('lastTotalCost', totalTableCost);
-            localStorage.setItem('lastWaterFee', collectedWaterFee);
-
-            resultDiv.innerHTML = `
-            <p>💳 当前总费用：${totalTableCost.toFixed(2)} 元</p>
-            <p>🫖 当前水费：${collectedWaterFee.toFixed(2)} 分</p>
-        `;
-        }
+        const totalTableCost = calculateTotalTableCost();
+        document.getElementById('totalCost').textContent = totalTableCost.toFixed(2);
+        document.getElementById('waterFee').textContent = collectedWaterFee.toFixed(2);
     }
 
     function renderPeople() {
@@ -894,16 +1219,13 @@
         container.innerHTML = '';
         const isEnded = isTableEnded();
 
-        // 获取当前所有成员的积分
         const points = members.map(m => m.point);
         const maxPoint = Math.max(...points);
         const minPoint = Math.min(...points);
 
-        // 判断是否有多个成员拥有相同的最高或最低积分
         const maxCount = points.filter(b => b === maxPoint).length;
         const minCount = points.filter(b => b === minPoint).length;
 
-        // 判断是否至少有两个成员
         const showEmoji = members.length >= 2;
 
         members.forEach(member => {
@@ -928,38 +1250,44 @@
 
             const status = member.active ? '在线' : '离线';
 
-            // 只有在唯一最大/最小时才显示 emoji
             const isMaxUnique = maxCount === 1 && member.point === maxPoint;
             const isMinUnique = minCount === 1 && member.point === minPoint;
 
             div.innerHTML = `
-            <div style="display:flex; align-items: center; gap: 12px;">
-                <div class="avatar">${member.name.charAt(0).toUpperCase()}</div>
-                <div style="flex:1;">
-                    <div style="display:flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <span class="name">
-                                ${member.name}
-                                ${showEmoji && isMaxUnique ? ' 🔥' : ''}
-                                ${showEmoji && isMinUnique ? ' 💧' : ''}
-                            </span>
-                            <span class="status">(${status})</span>
+                <div class="person-header">
+                    <div class="avatar">${member.name.charAt(0).toUpperCase()}</div>
+                    <div class="person-info">
+                        <div class="person-name">
+                            ${member.name}
+                            ${showEmoji && isMaxUnique ? ' 🔥' : ''}
+                            ${showEmoji && isMinUnique ? ' 💧' : ''}
                         </div>
-                        <span class="cost">💸 ${costText}</span>
+                        <div class="person-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">状态</div>
+                                <div class="stat-value ${member.active ? 'status' : 'status offline'}">${status}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">费用</div>
+                                <div class="stat-value cost">${costText}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">积分</div>
+                                <div class="stat-value point">${member.point.toFixed(2)} 分</div>
+                            </div>
+                        </div>
                     </div>
-                    <small class="point">🎯 积分：${member.point.toFixed(2)} 分</small>
                 </div>
-            </div>
-            ${isEnded ? '' : `
-                <div class="actions">
-                    ${member.active ? `<button onclick="leaveMember(${member.id})">❌ 退出</button>` : ''}
-                    ${!member.active ? `<button onclick="rejoinMember(${member.id})">✅ 加入</button>` : ''}
-                    <button onclick="openGiveScoreModal(${member.id})">🪙 掏分</button>
-                    ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})">📜 记录</button>` : ''}
-                    ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})">↩️ 撤回</button>` : ''}
-                </div>
-            `}
-        `;
+                ${isEnded ? '' : `
+                    <div class="actions">
+                        ${member.active ? `<button onclick="leaveMember(${member.id})"><i class="fas fa-sign-out-alt"></i> 退出</button>` : ''}
+                        ${!member.active ? `<button onclick="rejoinMember(${member.id})"><i class="fas fa-sign-in-alt"></i> 加入</button>` : ''}
+                        <button onclick="openGiveScoreModal(${member.id})"><i class="fas fa-coins"></i> 掏分</button>
+                        ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})"><i class="fas fa-history"></i> 记录</button>` : ''}
+                        ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})"><i class="fas fa-undo"></i> 撤回</button>` : ''}
+                    </div>
+                `}
+            `;
             container.appendChild(div);
         });
 
@@ -991,19 +1319,16 @@
             document.getElementById('waterFeeTarget').disabled = false;
             document.getElementById('btnReset').disabled = false;
 
-            document.getElementById('result').innerHTML = `
-                <p>💳 当前总费用：0.00 元</p>
-                <p>🫖 当前水费：0.00 分</p>
-            `;
+            document.getElementById('totalCost').textContent = '0.00';
+            document.getElementById('waterFee').textContent = '0.00';
             document.getElementById('log').textContent = "";
             document.getElementById("timeOption").style.display = "none";
             document.getElementById("durationOption").style.display = "none";
-            document.getElementById('durationDisplay').innerHTML = `<p>⏲️ 已开台时间：00:00:00</p>`;
+            document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：00:00:00</p>`;
             document.getElementById('endModeSelect').disabled = false;
             document.getElementById('endTimeInput').disabled = false;
             document.getElementById('durationInput').disabled = false;
             resetInputFields();
-            // ✅ 新增：清除 isEnded 标记
             const dataStr = localStorage.getItem('tableData');
             if (dataStr) {
                 const data = JSON.parse(dataStr);
@@ -1038,7 +1363,6 @@
         const member = members.find(m => m.id === id);
         if (!member || !member.history.length) return;
 
-        // 防止重复点击
         if (member.undoDisabled) {
             alert("每次只能撤回一次，转账后可再次操作");
             return;
@@ -1057,7 +1381,6 @@
             const {amount, fee, to} = lastTransfer;
             const toMember = members.find(m => m.name === to);
 
-            // A 转账给 B，A 收回金额，B 扣除到账金额，水费也回滚
             member.point += amount;
             if (toMember) {
                 toMember.point -= (amount - fee);
@@ -1072,13 +1395,10 @@
             log(`撤回：${member.name} 转给 ${to} 的 ${amount.toFixed(2)} 分`);
             log(`同时回滚水费抽成 ${fee.toFixed(2)} 分（当前：${collectedWaterFee.toFixed(2)}）`);
 
-            // 添加语音提醒 👇
             speak(`${member.name} 撤回给 ${to} 的转分：${Math.abs(amount)} 分`);
 
-            // 删除 A 的转出记录
             member.history.splice(lastOutIndex, 1);
 
-            // 设置撤回状态为 true
             member.undoDisabled = true;
         } else {
             alert("只能由转账发起人进行撤回操作");
@@ -1108,7 +1428,7 @@
                 ...member,
                 joinTime: member.joinTime ? member.joinTime.toISOString() : null,
                 undoDisabled: !!member.undoDisabled,
-                finalBalance: member.finalBalance // 保存最终费用
+                finalBalance: member.finalBalance
             })),
             waterFeeRate,
             waterFeeTarget,
@@ -1151,7 +1471,6 @@
                 const select = document.getElementById("endModeSelect");
                 select.value = data.endMode;
                 toggleEndOptions();
-                // 恢复输入框内容
                 if (data.endTime) {
                     document.getElementById("endTimeInput").value = data.endTime;
                 }
@@ -1159,41 +1478,36 @@
                     document.getElementById("durationInput").value = data.duration;
                 }
             }
-            // ✅ 如果存在 scheduledEndTime 并且尚未结束，则重新启动定时器
             if (scheduledEndTime && !isEnded) {
                 const now = new Date();
                 const delay = scheduledEndTime - now;
 
                 if (delay > 0) {
-                    // ✅ 根据模式重新启动 setTimeout
                     setTimeout(() => {
                         endTable();
                         speak("时间到！台球桌已关台");
                     }, delay);
                 } else {
-                    scheduledEndTime = null; // 过期了就清空
+                    scheduledEndTime = null;
                 }
             }
-            // 🔍 根据是否已经开台、是否结束来设置按钮状态
             if (startTime && !isEnded) {
-                // 已开台但未结束
                 document.getElementById('btnStart').disabled = true;
                 document.getElementById('btnEnd').disabled = false;
-                document.getElementById('btnAdd').disabled = false; // 允许继续添加成员
+                document.getElementById('btnAdd').disabled = false;
                 disableInputs();
                 if (!timerInterval) timerInterval = setInterval(updateCosts, 1000);
                 if (!durationInterval) {
                     durationInterval = setInterval(() => {
                         const elapsed = new Date() - startTime;
-                        document.getElementById('durationDisplay').innerHTML = `<p>⏲️ 已开台时间：${formatDuration(elapsed)}</p>`;
+                        document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
                     }, 1000);
                 }
             } else if (isEnded) {
-                // 已结束
                 const lastDuration = localStorage.getItem('lastTotalDuration');
                 if (lastDuration) {
                     const durationDisplay = document.getElementById('durationDisplay');
-                    durationDisplay.innerHTML = `<p>⏲️ 已开台时间：${formatDuration(parseInt(lastDuration))}</p>`;
+                    durationDisplay.innerHTML = `<p>已开台时间：${formatDuration(parseInt(lastDuration))}</p>`;
                 }
                 document.getElementById('btnStart').disabled = true;
                 document.getElementById('btnEnd').disabled = true;
@@ -1201,10 +1515,9 @@
                 document.getElementById('btnReset').disabled = false;
                 disableInputs();
             } else {
-                // 未开台，保持初始状态
                 document.getElementById('btnStart').disabled = members.length === 0;
                 document.getElementById('btnEnd').disabled = true;
-                document.getElementById('btnAdd').disabled = false; // 允许继续添加成员
+                document.getElementById('btnAdd').disabled = false;
                 document.getElementById('btnReset').disabled = false;
 
                 enableInputs();
@@ -1215,7 +1528,6 @@
         }
     }
 
-    // 封装函数
     function getNumberInput(id, defaultValue = 0) {
         const val = parseFloat(document.getElementById(id).value);
         return isNaN(val) ? defaultValue : val;
@@ -1225,16 +1537,9 @@
         const isStarted = !!startTime;
         const isEnded = isTableEnded();
 
-        // 开台按钮：已开始 或 已结束 → 禁用；否则根据是否有成员决定是否启用
         document.getElementById('btnStart').disabled = isStarted || isEnded || members.length === 0;
-
-        // 关台按钮：未开始 或 已结束 → 禁用
         document.getElementById('btnEnd').disabled = !isStarted || isEnded;
-
-        // 添加成员按钮：已结束 → 禁用
         document.getElementById('btnAdd').disabled = isEnded;
-
-        // 重置按钮始终可用
         document.getElementById('btnReset').disabled = false;
     }
 
@@ -1263,7 +1568,6 @@
         localStorage.removeItem('lastTotalDuration');
     }
 
-    // 判断是否已经关台
     function isTableEnded() {
         const dataStr = localStorage.getItem('tableData');
         if (dataStr) {
@@ -1277,7 +1581,7 @@
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(() => {
             saveDataToLocalStorage();
-        }, 300); // 300ms 后保存
+        }, 300);
     }
 
     function setupInputBlurListeners() {
@@ -1290,13 +1594,19 @@
         });
     }
 
+    function clearLog() {
+        if (confirm("确定要清空操作日志吗？")) {
+            document.getElementById('log').textContent = '';
+            saveDataToLocalStorage();
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         loadDataFromLocalStorage();
         renderPeople();
         updateButtonStates();
         setupInputBlurListeners();
 
-        // 如果页面恢复可见性，重新启动计时器
         document.addEventListener("visibilitychange", () => {
             if (!document.hidden && startTime) {
                 if (!timerInterval) {
@@ -1316,23 +1626,22 @@
                 if (!durationInterval) {
                     durationInterval = setInterval(() => {
                         const elapsed = new Date() - startTime;
-                        document.getElementById('durationDisplay').innerHTML = `<p>⏲️ 已开台时间：${formatDuration(elapsed)}</p>`;
+                        document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
                     }, 1000);
                 }
             } else {
                 startTime = null;
-                document.getElementById('durationDisplay').innerHTML = `<p>⏲️ 已开台时间：00:00:00</p>`;
+                document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：00:00:00</p>`;
             }
         }
     });
 
-    // 页面可见性变化处理
     document.addEventListener("visibilitychange", () => {
         if (!document.hidden && startTime) {
             if (!timerInterval) {
                 timerInterval = setInterval(updateCosts, 1000);
             }
-            updateCosts(); // 强制立即刷新一次金额
+            updateCosts();
         } else if (document.hidden && timerInterval) {
             clearInterval(timerInterval);
             timerInterval = null;
@@ -1340,20 +1649,7 @@
     });
 
     renderPeople();
-    setInterval(saveDataToLocalStorage, 5000); // 每 5 秒保存一次
+    setInterval(saveDataToLocalStorage, 5000);
 </script>
-
-<!-- 自定义输入模态框 -->
-<div id="inputModal" class="modal-overlay" style="display:none;">
-    <div class="modal">
-        <h3>请输入成员姓名</h3>
-        <input type="text" id="inputName" placeholder="输入名字后点击确认"/>
-        <div style="margin-top:10px;text-align:right;">
-            <button onclick="confirmInput()">确认</button>
-            <button onclick="cancelInput()">取消</button>
-        </div>
-    </div>
-</div>
-
 </body>
 </html>
