@@ -418,6 +418,11 @@
             color: var(--accent);
         }
 
+        .delete-btn {
+            background: var(--danger);
+            color: white;
+        }
+
         .actions {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -1329,21 +1334,53 @@
                         </div>
                     </div>
                 </div>
-                ${isEnded ? '' : `
-                    <div class="actions">
-                        ${member.active ? `<button onclick="leaveMember(${member.id})"><i class="fas fa-sign-out-alt"></i> 退出</button>` : ''}
-                        ${!member.active ? `<button onclick="rejoinMember(${member.id})"><i class="fas fa-sign-in-alt"></i> 加入</button>` : ''}
-                        <button onclick="openGiveScoreModal(${member.id})"><i class="fas fa-coins"></i> 掏分</button>
-                        ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})"><i class="fas fa-history"></i> 记录</button>` : ''}
-                        ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})"><i class="fas fa-undo"></i> 撤回</button>` : ''}
-                    </div>
-                `}
+                    ${(() => {
+                    const isStarted = !!startTime;
+                    const isEnded = isTableEnded();
+
+                    if (isEnded) {
+                        // 已关台：不显示任何按钮
+                        return '';
+                    } else if (!isStarted) {
+                        // 未开台：只显示删除按钮
+                        return `
+                <div class="actions">
+                    <button class="delete-btn" onclick="deleteMember(${member.id})">
+                        <i class="fas fa-trash"></i> 删除
+                    </button>
+                </div>
+            `;
+                    } else {
+                        // 开台中：保留原有按钮
+                        return `
+                <div class="actions">
+                    ${member.active ? `<button onclick="leaveMember(${member.id})"><i class="fas fa-sign-out-alt"></i> 退出</button>` : ''}
+                    ${!member.active ? `<button onclick="rejoinMember(${member.id})"><i class="fas fa-sign-in-alt"></i> 加入</button>` : ''}
+                    <button onclick="openGiveScoreModal(${member.id})"><i class="fas fa-coins"></i> 掏分</button>
+                    ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})"><i class="fas fa-history"></i> 记录</button>` : ''}
+                    ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})"><i class="fas fa-undo"></i> 撤回</button>` : ''}
+                </div>
+            `;
+                    }
+                })()}
             `;
             container.appendChild(div);
         });
 
         document.getElementById('btnStart').disabled = members.length === 0;
         updateButtonStates();
+    }
+
+    function deleteMember(id) {
+        if (!confirm("确定要删除该成员吗？")) return;
+
+        const index = members.findIndex(m => m.id === id);
+        if (index !== -1) {
+            members.splice(index, 1);
+            log(`成员被删除`);
+            renderPeople();
+            saveDataToLocalStorage();
+        }
     }
 
     function resetAll() {
