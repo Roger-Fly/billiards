@@ -411,11 +411,15 @@
         }
 
         .cost {
-            color: var(--danger);
+            color: var(--accent);
         }
 
-        .point {
-            color: var(--accent);
+        .point-negative {
+            color: var(--success);
+        }
+
+        .point-positive {
+            color: var(--danger);
         }
 
         .delete-btn {
@@ -1324,12 +1328,15 @@
                                 <div class="stat-value ${member.active ? 'status' : 'status offline'}">${status}</div>
                             </div>
                             <div class="stat-item">
-                                <div class="stat-label">费用</div>
-                                <div class="stat-value cost">${costText}</div>
+                                <div class="stat-label">积分</div>
+                                ${member.point < 0
+                                    ? `<div class="stat-value point point-negative">${member.point.toFixed(2)} 分</div>`
+                                    : `<div class="stat-value point point-positive">${member.point.toFixed(2)} 分</div>`
+                                }
                             </div>
                             <div class="stat-item">
-                                <div class="stat-label">积分</div>
-                                <div class="stat-value point">${member.point.toFixed(2)} 分</div>
+                                <div class="stat-label">费用</div>
+                                <div class="stat-value cost">${costText}</div>
                             </div>
                         </div>
                     </div>
