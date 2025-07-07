@@ -411,7 +411,7 @@
         }
 
         .cost {
-            color: var(--success);
+            color: var(--danger);
         }
 
         .point {
@@ -1180,14 +1180,14 @@
 
         startTime = new Date();
         const durationDisplay = document.getElementById('durationDisplay');
-        durationDisplay.innerHTML = `<p>已开台时间：00:00:00</p>`;
+        durationDisplay.innerHTML = `已开台时间：<span>00:00:00</span>`;
 
         if (durationInterval) clearInterval(durationInterval);
 
         durationInterval = setInterval(() => {
             if (!startTime) return;
             const elapsed = new Date() - startTime;
-            document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
+            document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>${formatDuration(elapsed)}</span>`;
         }, 1000);
 
         document.getElementById('btnStart').disabled = true;
@@ -1375,7 +1375,7 @@
             document.getElementById('log').textContent = "";
             document.getElementById("timeOption").style.display = "none";
             document.getElementById("durationOption").style.display = "none";
-            document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：00:00:00</p>`;
+            document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>00:00:00</span>`;
             document.getElementById('endModeSelect').disabled = false;
             document.getElementById('endTimeInput').disabled = false;
             document.getElementById('durationInput').disabled = false;
@@ -1551,14 +1551,14 @@
                 if (!durationInterval) {
                     durationInterval = setInterval(() => {
                         const elapsed = new Date() - startTime;
-                        document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
+                        document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>${formatDuration(elapsed)}</span>`;
                     }, 1000);
                 }
             } else if (isEnded) {
                 const lastDuration = localStorage.getItem('lastTotalDuration');
                 if (lastDuration) {
                     const durationDisplay = document.getElementById('durationDisplay');
-                    durationDisplay.innerHTML = `<p>已开台时间：${formatDuration(parseInt(lastDuration))}</p>`;
+                    durationDisplay.innerHTML = `已开台时间：<span>${formatDuration(parseInt(lastDuration))}</span>`;
                 }
                 document.getElementById('btnStart').disabled = true;
                 document.getElementById('btnEnd').disabled = true;
@@ -1678,12 +1678,12 @@
                 if (!durationInterval) {
                     durationInterval = setInterval(() => {
                         const elapsed = new Date() - startTime;
-                        document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：${formatDuration(elapsed)}</p>`;
+                        document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>${formatDuration(elapsed)}</span>`;
                     }, 1000);
                 }
             } else {
                 startTime = null;
-                document.getElementById('durationDisplay').innerHTML = `<p>已开台时间：00:00:00</p>`;
+                document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>00:00:00</span>`;
             }
         }
     });
