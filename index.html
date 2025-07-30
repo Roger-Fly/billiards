@@ -1730,7 +1730,21 @@
                 document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>00:00:00</span>`;
             }
         }
+
+        // 初始化共享功能
+        setTimeout(() => {
+            initShareConnection();
+            setupShareDataWatchers();
+
+            // 定期同步数据（如果是主机）
+            setInterval(() => {
+                if (isShareHost) {
+                    broadcastShareUpdate();
+                }
+            }, 10000); // 每10秒同步一次
+        }, 1000);
     });
+
 
     document.addEventListener("visibilitychange", () => {
         if (!document.hidden && startTime) {
@@ -1874,13 +1888,21 @@
         const url = `${window.location.origin}${window.location.pathname}?share=${peerId}`;
         const qrCanvas = document.getElementById('qrCanvas');
 
-        // 先清除现有二维码
+        // 确保canvas元素存在
+        if (!qrCanvas) {
+            console.error('找不到二维码canvas元素');
+            updateShareStatus("页面元素错误", "error");
+            return;
+        }
+
+        // 清除现有内容
         const ctx = qrCanvas.getContext('2d');
         ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
 
         // 生成新二维码
         QRCode.toCanvas(qrCanvas, url, {
             width: 160,
+            height: 160,
             colorDark: "#2c3e50",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
@@ -1888,9 +1910,9 @@
             if (err) {
                 console.error('生成二维码失败:', err);
                 updateShareStatus("生成二维码失败", "error");
-                qrCanvas.innerHTML = '<div style="color:red; font-size:12px;">二维码生成失败</div>';
             } else {
                 console.log('二维码生成成功');
+                updateShareStatus(`主机已就绪 (ID: ${peerId})`, "connected");
             }
         });
     }
@@ -1997,12 +2019,24 @@
         if (data.type === 'update') {
             try {
                 // 更新基础设置
-                document.getElementById('hourlyRate').value = data.data.hourlyRate || 0;
-                document.getElementById('endModeSelect').value = data.data.endMode || 'manual';
-                document.getElementById('endTimeInput').value = data.data.endTime || '';
-                document.getElementById('durationInput').value = data.data.duration || '';
-                document.getElementById('waterFeeRate').value = data.data.waterFeeRate || 10;
-                document.getElementById('waterFeeTarget').value = data.data.waterFeeTarget || 50;
+                if (data.data.hourlyRate !== undefined) {
+                    document.getElementById('hourlyRate').value = data.data.hourlyRate || 0;
+                }
+                if (data.data.endMode) {
+                    document.getElementById('endModeSelect').value = data.data.endMode || 'manual';
+                }
+                if (data.data.endTime !== undefined) {
+                    document.getElementById('endTimeInput').value = data.data.endTime || '';
+                }
+                if (data.data.duration !== undefined) {
+                    document.getElementById('durationInput').value = data.data.duration || '';
+                }
+                if (data.data.waterFeeRate !== undefined) {
+                    document.getElementById('waterFeeRate').value = data.data.waterFeeRate || 10;
+                }
+                if (data.data.waterFeeTarget !== undefined) {
+                    document.getElementById('waterFeeTarget').value = data.data.waterFeeTarget || 50;
+                }
 
                 // 更新成员数据
                 if (Array.isArray(data.data.members)) {
@@ -2017,8 +2051,12 @@
                 }
 
                 // 更新状态
-                startTime = data.data.startTime ? new Date(data.data.startTime) : null;
-                collectedWaterFee = data.data.collectedWaterFee || 0;
+                if (data.data.startTime !== undefined) {
+                    startTime = data.data.startTime ? new Date(data.data.startTime) : null;
+                }
+                if (data.data.collectedWaterFee !== undefined) {
+                    collectedWaterFee = data.data.collectedWaterFee || 0;
+                }
 
                 // 更新UI
                 renderPeople();
@@ -2031,7 +2069,7 @@
                     disableInputs();
                 }
 
-                log(`[数据同步] ${new Date(data.data.timestamp).toLocaleTimeString()}`);
+                log(`[数据同步] ${new Date().toLocaleTimeString()}`);
 
             } catch (err) {
                 console.error('处理共享数据出错:', err);
@@ -2132,21 +2170,6 @@
         };
     }
 
-    // ========== 初始化共享功能 ==========
-    document.addEventListener("DOMContentLoaded", function() {
-        // 延迟初始化以确保其他组件已加载
-        setTimeout(() => {
-            initShareConnection();
-            setupShareDataWatchers();
-
-            // 定期同步数据（如果是主机）
-            setInterval(() => {
-                if (isShareHost) {
-                    broadcastShareUpdate();
-                }
-            }, 10000); // 每10秒同步一次
-        }, 1000);
-    });
 </script>
 </body>
 </html>
