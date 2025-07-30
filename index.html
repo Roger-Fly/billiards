@@ -1747,5 +1747,406 @@
     renderPeople();
     setInterval(saveDataToLocalStorage, 5000);
 </script>
+<!-- 在页面底部 </body> 标签前添加以下代码 -->
+<div id="shareSection" style="margin: 30px auto 0; max-width: 600px; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; text-align: center;">
+    <h3 style="color: white; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+        <i class="fas fa-share-alt"></i> 实时数据共享
+    </h3>
+
+    <div id="shareStatus" style="color: #ccc; margin-bottom: 15px; padding: 8px; border-radius: 5px; background: rgba(0,0,0,0.2);">
+        <i class="fas fa-circle-notch fa-spin"></i> 正在初始化连接...
+    </div>
+
+    <div id="shareQRCode" style="margin: 0 auto; width: 180px; height: 180px; background: white; padding: 10px; border-radius: 10px; display: flex; justify-content: center; align-items: center;">
+        <canvas id="qrCanvas" width="160" height="160"></canvas>
+    </div>
+
+    <div style="margin-top: 15px; display: flex; justify-content: center; gap: 10px;">
+        <button onclick="copyShareLink()" style="background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; flex: 1; max-width: 150px; display: flex; align-items: center; justify-content: center; gap: 5px;">
+            <i class="fas fa-copy"></i> 复制邀请链接
+        </button>
+        <button onclick="resetShareConnection()" style="background: var(--danger); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; flex: 1; max-width: 150px; display: flex; align-items: center; justify-content: center; gap: 5px;">
+            <i class="fas fa-sync-alt"></i> 重置连接
+        </button>
+    </div>
+
+    <div id="connectedDevices" style="margin-top: 15px; color: #ddd; font-size: 14px; padding: 8px; border-radius: 5px; background: rgba(0,0,0,0.2);">
+        <i class="fas fa-users"></i> 已连接设备: <span id="deviceCount">0</span>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+
+<script>
+    // ========== 共享功能全局变量 ==========
+    let sharePeer = null;
+    let shareConn = null;
+    let isShareHost = false;
+    let shareData = {};
+    let connectedDeviceCount = 0;
+
+    // ========== 初始化共享连接 ==========
+    function initShareConnection() {
+        updateShareStatus("正在初始化连接...", "connecting");
+
+        // 尝试从URL获取主机ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const hostId = urlParams.get('share');
+
+        // 创建Peer实例
+        sharePeer = new Peer({
+            host: '0.peerjs.com',
+            port: 443,
+            secure: true,
+            debug: 2
+        });
+
+        sharePeer.on('open', (id) => {
+            if (hostId) {
+                // 作为客户端连接
+                updateShareStatus("正在连接到主机...", "connecting");
+                connectToSharePeer(hostId);
+            } else {
+                // 作为主机
+                isShareHost = true;
+                updateShareStatus(`主机已就绪 (ID: ${id})`, "connected");
+                generateShareQRCode(id);
+                setupShareData();
+            }
+        });
+
+        sharePeer.on('connection', (conn) => {
+            setupShareConnection(conn);
+        });
+
+        sharePeer.on('error', (err) => {
+            console.error('共享连接错误:', err);
+            updateShareStatus(`错误: ${err.type}`, "error");
+
+            // 尝试重新连接
+            setTimeout(initShareConnection, 3000);
+        });
+
+        sharePeer.on('disconnected', () => {
+            updateShareStatus("连接断开，正在重新连接...", "disconnected");
+            sharePeer.reconnect();
+        });
+    }
+
+    // ========== 连接到共享主机 ==========
+    function connectToSharePeer(hostId) {
+        shareConn = sharePeer.connect(hostId, {
+            reliable: true,
+            serialization: 'json'
+        });
+
+        shareConn.on('open', () => {
+            updateShareStatus("已连接到主机", "connected");
+            updateConnectedDevices(1);
+
+            // 请求初始数据
+            shareConn.send({ type: 'requestData' });
+        });
+
+        setupShareConnection(shareConn);
+    }
+
+    // ========== 设置共享连接 ==========
+    function setupShareConnection(conn) {
+        conn.on('data', (data) => {
+            handleShareData(data);
+        });
+
+        conn.on('close', () => {
+            updateShareStatus("连接已关闭", "disconnected");
+            updateConnectedDevices(0);
+        });
+
+        conn.on('error', (err) => {
+            console.error('连接错误:', err);
+            updateShareStatus(`连接错误: ${err.message}`, "error");
+        });
+    }
+
+    // ========== 生成分享二维码 ==========
+    function generateShareQRCode(peerId) {
+        const url = `${window.location.origin}${window.location.pathname}?share=${peerId}`;
+        const qrCanvas = document.getElementById('qrCanvas');
+
+        // 先清除现有二维码
+        const ctx = qrCanvas.getContext('2d');
+        ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+
+        // 生成新二维码
+        QRCode.toCanvas(qrCanvas, url, {
+            width: 160,
+            colorDark: "#2c3e50",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        }, (err) => {
+            if (err) {
+                console.error('生成二维码失败:', err);
+                updateShareStatus("生成二维码失败", "error");
+                qrCanvas.innerHTML = '<div style="color:red; font-size:12px;">二维码生成失败</div>';
+            } else {
+                console.log('二维码生成成功');
+            }
+        });
+    }
+
+    // ========== 复制分享链接 ==========
+    function copyShareLink() {
+        if (!sharePeer || !sharePeer.id) {
+            alert("请等待连接初始化完成");
+            return;
+        }
+
+        const url = `${window.location.origin}${window.location.pathname}?share=${sharePeer.id}`;
+        navigator.clipboard.writeText(url).then(() => {
+            alert('邀请链接已复制到剪贴板！\n\n' + url);
+        }).catch(err => {
+            console.error('复制失败:', err);
+            alert('复制失败，请手动复制URL');
+        });
+    }
+
+    // ========== 重置共享连接 ==========
+    function resetShareConnection() {
+        if (confirm("确定要重置共享连接吗？当前连接将断开")) {
+            if (sharePeer) {
+                sharePeer.destroy();
+                sharePeer = null;
+            }
+            shareConn = null;
+            isShareHost = false;
+            connectedDeviceCount = 0;
+
+            updateShareStatus("正在重新初始化...", "connecting");
+            updateConnectedDevices(0);
+
+            // 清除二维码
+            const qrCanvas = document.getElementById('qrCanvas');
+            const ctx = qrCanvas.getContext('2d');
+            ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+
+            // 重新初始化
+            setTimeout(initShareConnection, 500);
+        }
+    }
+
+    // ========== 更新共享状态显示 ==========
+    function updateShareStatus(message, status) {
+        const statusEl = document.getElementById('shareStatus');
+        statusEl.innerHTML = `<i class="fas ${getStatusIcon(status)}"></i> ${message}`;
+
+        // 更新颜色
+        const colors = {
+            connecting: '#f39c12',  // 橙色
+            connected: '#2ecc71',   // 绿色
+            error: '#e74c3c',       // 红色
+            disconnected: '#95a5a6' // 灰色
+        };
+        statusEl.style.color = colors[status] || '#ccc';
+    }
+
+    function getStatusIcon(status) {
+        const icons = {
+            connecting: 'fa-circle-notch fa-spin',
+            connected: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            disconnected: 'fa-plug'
+        };
+        return icons[status] || 'fa-info-circle';
+    }
+
+    // ========== 更新已连接设备数 ==========
+    function updateConnectedDevices(count) {
+        connectedDeviceCount = count;
+        document.getElementById('deviceCount').textContent = count;
+    }
+
+    // ========== 准备要共享的数据 ==========
+    function setupShareData() {
+        // 准备成员数据（简化格式）
+        const sharedMembers = members.map(member => ({
+            id: member.id,
+            name: member.name,
+            point: member.point,
+            active: member.active,
+            finalBalance: member.finalBalance
+        }));
+
+        shareData = {
+            hourlyRate: document.getElementById('hourlyRate').value,
+            endMode: document.getElementById('endModeSelect').value,
+            endTime: document.getElementById('endTimeInput').value,
+            duration: document.getElementById('durationInput').value,
+            waterFeeRate: document.getElementById('waterFeeRate').value,
+            waterFeeTarget: document.getElementById('waterFeeTarget').value,
+            members: sharedMembers,
+            startTime: startTime ? startTime.toISOString() : null,
+            collectedWaterFee: collectedWaterFee,
+            isEnded: isTableEnded(),
+            timestamp: new Date().getTime()
+        };
+    }
+
+    // ========== 处理接收到的共享数据 ==========
+    function handleShareData(data) {
+        if (data.type === 'update') {
+            try {
+                // 更新基础设置
+                document.getElementById('hourlyRate').value = data.data.hourlyRate || 0;
+                document.getElementById('endModeSelect').value = data.data.endMode || 'manual';
+                document.getElementById('endTimeInput').value = data.data.endTime || '';
+                document.getElementById('durationInput').value = data.data.duration || '';
+                document.getElementById('waterFeeRate').value = data.data.waterFeeRate || 10;
+                document.getElementById('waterFeeTarget').value = data.data.waterFeeTarget || 50;
+
+                // 更新成员数据
+                if (Array.isArray(data.data.members)) {
+                    members = data.data.members.map(member => {
+                        const existing = members.find(m => m.id === member.id) || {};
+                        return {
+                            ...existing,
+                            ...member,
+                            joinTime: member.joinTime ? new Date(member.joinTime) : null
+                        };
+                    });
+                }
+
+                // 更新状态
+                startTime = data.data.startTime ? new Date(data.data.startTime) : null;
+                collectedWaterFee = data.data.collectedWaterFee || 0;
+
+                // 更新UI
+                renderPeople();
+                updateCosts();
+
+                // 更新关台状态
+                if (data.data.isEnded) {
+                    document.getElementById('btnStart').disabled = true;
+                    document.getElementById('btnEnd').disabled = true;
+                    disableInputs();
+                }
+
+                log(`[数据同步] ${new Date(data.data.timestamp).toLocaleTimeString()}`);
+
+            } catch (err) {
+                console.error('处理共享数据出错:', err);
+                log(`[错误] 数据同步失败: ${err.message}`);
+            }
+
+        } else if (data.type === 'requestData' && isShareHost) {
+            // 主机响应数据请求
+            setupShareData();
+            if (shareConn && shareConn.open) {
+                shareConn.send({
+                    type: 'update',
+                    data: shareData
+                });
+            }
+        }
+    }
+
+    // ========== 广播数据变更 ==========
+    function broadcastShareUpdate() {
+        if (isShareHost && shareConn && shareConn.open) {
+            setupShareData();
+            shareConn.send({
+                type: 'update',
+                data: shareData
+            });
+        }
+    }
+
+    // ========== 设置数据变更监听 ==========
+    function setupShareDataWatchers() {
+        // 监听所有输入框变化
+        const inputIds = [
+            'hourlyRate', 'endModeSelect', 'endTimeInput', 'durationInput',
+            'waterFeeRate', 'waterFeeTarget'
+        ];
+
+        inputIds.forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                if (isShareHost) {
+                    broadcastShareUpdate();
+                }
+            });
+        });
+
+        // 重写关键函数以包含广播
+        const originalFunctions = {
+            addPerson: addPerson,
+            deleteMember: deleteMember,
+            startTable: startTable,
+            endTable: endTable,
+            submitGiveScore: submitGiveScore,
+            undoLastTransfer: undoLastTransfer,
+            resetAll: resetAll
+        };
+
+        // 重写函数
+        addPerson = function() {
+            const result = originalFunctions.addPerson.apply(this, arguments);
+            if (isShareHost) broadcastShareUpdate();
+            return result;
+        };
+
+        deleteMember = function() {
+            const result = originalFunctions.deleteMember.apply(this, arguments);
+            if (isShareHost) broadcastShareUpdate();
+            return result;
+        };
+
+        startTable = function() {
+            const result = originalFunctions.startTable.apply(this, arguments);
+            if (isShareHost) broadcastShareUpdate();
+            return result;
+        };
+
+        endTable = function() {
+            const result = originalFunctions.endTable.apply(this, arguments);
+            if (isShareHost) broadcastShareUpdate();
+            return result;
+        };
+
+        submitGiveScore = function() {
+            const result = originalFunctions.submitGiveScore.apply(this, arguments);
+            if (isShareHost) broadcastShareUpdate();
+            return result;
+        };
+
+        undoLastTransfer = function() {
+            const result = originalFunctions.undoLastTransfer.apply(this, arguments);
+            if (isShareHost) broadcastShareUpdate();
+            return result;
+        };
+
+        resetAll = function() {
+            const result = originalFunctions.resetAll.apply(this, arguments);
+            if (isShareHost) broadcastShareUpdate();
+            return result;
+        };
+    }
+
+    // ========== 初始化共享功能 ==========
+    document.addEventListener("DOMContentLoaded", function() {
+        // 延迟初始化以确保其他组件已加载
+        setTimeout(() => {
+            initShareConnection();
+            setupShareDataWatchers();
+
+            // 定期同步数据（如果是主机）
+            setInterval(() => {
+                if (isShareHost) {
+                    broadcastShareUpdate();
+                }
+            }, 10000); // 每10秒同步一次
+        }, 1000);
+    });
+</script>
 </body>
 </html>
