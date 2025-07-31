@@ -1789,8 +1789,9 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+<!-- 使用本地库文件替代 CDN 引用 -->
+<script src="libs/peerjs.min.js"></script>
+<script src="libs/qrcode.min.js"></script>
 
 <script>
     // ========== 共享功能全局变量 ==========
@@ -1838,21 +1839,39 @@
             console.error('共享连接错误:', err);
             updateShareStatus(`错误: ${err.type}`, "error");
 
+            // 特别处理 peer-unavailable 错误
+            if (err.type === 'peer-unavailable') {
+                updateShareStatus("错误: 无法连接到主机，请确认主机是否在线", "error");
+            }
+
             // 尝试重新连接
-            setTimeout(initShareConnection, 3000);
+            setTimeout(initShareConnection, 5000);
         });
 
         sharePeer.on('disconnected', () => {
             updateShareStatus("连接断开，正在重新连接...", "disconnected");
-            sharePeer.reconnect();
+            // 延迟重新连接
+            setTimeout(() => {
+                if (sharePeer) {
+                    sharePeer.reconnect();
+                }
+            }, 1000);
         });
     }
 
     // ========== 连接到共享主机 ==========
     function connectToSharePeer(hostId) {
+        if (!sharePeer) {
+            updateShareStatus("Peer实例未初始化", "error");
+            return;
+        }
+
+        updateShareStatus(`正在连接到主机 ${hostId}...`, "connecting");
+
         shareConn = sharePeer.connect(hostId, {
             reliable: true,
-            serialization: 'json'
+            serialization: 'json',
+            metadata: { browser: navigator.userAgent }
         });
 
         shareConn.on('open', () => {
@@ -1863,11 +1882,25 @@
             shareConn.send({ type: 'requestData' });
         });
 
+        shareConn.on('error', (err) => {
+            console.error('连接错误:', err);
+            updateShareStatus(`连接错误: ${err.message}`, "error");
+
+            if (err.type === 'peer-unavailable') {
+                updateShareStatus("无法找到主机，请确认主机是否在线", "error");
+            }
+        });
+
         setupShareConnection(shareConn);
     }
 
     // ========== 设置共享连接 ==========
     function setupShareConnection(conn) {
+        if (!conn) {
+            console.error('连接对象为空');
+            return;
+        }
+
         conn.on('data', (data) => {
             handleShareData(data);
         });
@@ -1875,6 +1908,11 @@
         conn.on('close', () => {
             updateShareStatus("连接已关闭", "disconnected");
             updateConnectedDevices(0);
+
+            // 如果是主机，清理连接
+            if (isShareHost && shareConn === conn) {
+                shareConn = null;
+            }
         });
 
         conn.on('error', (err) => {
@@ -1885,7 +1923,9 @@
 
     // ========== 生成分享二维码 ==========
     function generateShareQRCode(peerId) {
+        console.log('开始生成二维码，Peer ID:', peerId);
         const url = `${window.location.origin}${window.location.pathname}?share=${peerId}`;
+        console.log('二维码链接:', url);
         const qrCanvas = document.getElementById('qrCanvas');
 
         // 确保canvas元素存在
@@ -1895,26 +1935,67 @@
             return;
         }
 
-        // 清除现有内容
-        const ctx = qrCanvas.getContext('2d');
-        ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+        console.log('找到 qrCanvas 元素:', qrCanvas);
+        console.log('QRCode 对象:', typeof QRCode, QRCode);
 
-        // 生成新二维码
-        QRCode.toCanvas(qrCanvas, url, {
-            width: 160,
-            height: 160,
-            colorDark: "#2c3e50",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-        }, (err) => {
-            if (err) {
-                console.error('生成二维码失败:', err);
-                updateShareStatus("生成二维码失败", "error");
-            } else {
+        try {
+            // 清除现有内容
+            const ctx = qrCanvas.getContext('2d');
+            ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+            console.log('已清除画布内容');
+
+            // 检查 QRCode 库的可用性
+            if (!QRCode) {
+                console.error('QRCode.js 库未加载');
+                updateShareStatus("QRCode.js 未加载", "error");
+                showTextLink(url);
+                return;
+            }
+
+            // 使用不同的方式生成二维码，确保兼容性
+            if (typeof QRCode.toCanvas === 'function') {
+                console.log('使用 QRCode.toCanvas 方法');
+                // 使用简单的配置避免错误
+                QRCode.toCanvas(qrCanvas, url, {
+                    width: 160,
+                    margin: 2,
+                    color: {
+                        dark: "#2c3e50",
+                        light: "#ffffff"
+                    }
+                }, (err) => {
+                    if (err) {
+                        console.error('生成二维码失败:', err);
+                        updateShareStatus("生成二维码失败: " + err.message, "error");
+                        showTextLink(url);
+                    } else {
+                        console.log('二维码生成成功');
+                        updateShareStatus(`主机已就绪 (ID: ${peerId})`, "connected");
+                    }
+                });
+            } else if (typeof QRCode === 'function') {
+                console.log('使用 QRCode 构造函数方法');
+                // 尝试使用构造函数方式
+                const qrCode = new QRCode(qrCanvas, {
+                    text: url,
+                    width: 160,
+                    height: 160,
+                    colorDark: "#2c3e50",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel ? QRCode.CorrectLevel.M : 'M'
+                });
                 console.log('二维码生成成功');
                 updateShareStatus(`主机已就绪 (ID: ${peerId})`, "connected");
+            } else {
+                console.error('QRCode.js 库结构未知');
+                updateShareStatus("QRCode.js 结构不兼容", "error");
+                showTextLink(url);
             }
-        });
+        } catch (e) {
+            console.error('生成二维码时发生异常:', e);
+            updateShareStatus("生成二维码异常: " + e.message, "error");
+            showTextLink(url);
+        }
     }
 
     // ========== 复制分享链接 ==========
@@ -2016,25 +2097,31 @@
 
     // ========== 处理接收到的共享数据 ==========
     function handleShareData(data) {
+        if (!data || !data.type) {
+            console.warn('收到无效数据:', data);
+            return;
+        }
+
         if (data.type === 'update') {
             try {
                 // 更新基础设置
-                if (data.data.hourlyRate !== undefined) {
+                if (data.data.hasOwnProperty('hourlyRate')) {
                     document.getElementById('hourlyRate').value = data.data.hourlyRate || 0;
                 }
-                if (data.data.endMode) {
+                if (data.data.hasOwnProperty('endMode')) {
                     document.getElementById('endModeSelect').value = data.data.endMode || 'manual';
+                    toggleEndOptions(); // 确保选项显示正确
                 }
-                if (data.data.endTime !== undefined) {
+                if (data.data.hasOwnProperty('endTime')) {
                     document.getElementById('endTimeInput').value = data.data.endTime || '';
                 }
-                if (data.data.duration !== undefined) {
+                if (data.data.hasOwnProperty('duration')) {
                     document.getElementById('durationInput').value = data.data.duration || '';
                 }
-                if (data.data.waterFeeRate !== undefined) {
+                if (data.data.hasOwnProperty('waterFeeRate')) {
                     document.getElementById('waterFeeRate').value = data.data.waterFeeRate || 10;
                 }
-                if (data.data.waterFeeTarget !== undefined) {
+                if (data.data.hasOwnProperty('waterFeeTarget')) {
                     document.getElementById('waterFeeTarget').value = data.data.waterFeeTarget || 50;
                 }
 
@@ -2051,10 +2138,10 @@
                 }
 
                 // 更新状态
-                if (data.data.startTime !== undefined) {
+                if (data.data.hasOwnProperty('startTime')) {
                     startTime = data.data.startTime ? new Date(data.data.startTime) : null;
                 }
-                if (data.data.collectedWaterFee !== undefined) {
+                if (data.data.hasOwnProperty('collectedWaterFee')) {
                     collectedWaterFee = data.data.collectedWaterFee || 0;
                 }
 
@@ -2063,7 +2150,7 @@
                 updateCosts();
 
                 // 更新关台状态
-                if (data.data.isEnded) {
+                if (data.data.hasOwnProperty('isEnded') && data.data.isEnded) {
                     document.getElementById('btnStart').disabled = true;
                     document.getElementById('btnEnd').disabled = true;
                     disableInputs();
@@ -2084,7 +2171,12 @@
                     type: 'update',
                     data: shareData
                 });
+                console.log('已发送初始数据给客户端');
+            } else {
+                console.warn('无法发送初始数据：连接未建立或已关闭');
             }
+        } else {
+            console.warn('未知数据类型:', data.type);
         }
     }
 
@@ -2096,6 +2188,11 @@
                 type: 'update',
                 data: shareData
             });
+            console.log('数据已广播');
+        } else if (isShareHost && !shareConn) {
+            console.log('无客户端连接，无需广播数据');
+        } else if (isShareHost && shareConn && !shareConn.open) {
+            console.log('连接已关闭，无法广播数据');
         }
     }
 
