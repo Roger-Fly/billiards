@@ -1801,37 +1801,137 @@
     let shareData = {};
     let connectedDeviceCount = 0;
 
-    // ========== 初始化共享连接 ==========
-    function initShareConnection() {
-        updateShareStatus("正在初始化连接...", "connecting");
-
-        // 尝试从URL获取主机ID
-        const urlParams = new URLSearchParams(window.location.search);
-        const hostId = urlParams.get('share');
-
-        // 创建Peer实例
-        sharePeer = new Peer({
+    // ========== 创建Peer实例 ==========
+    function createPeerInstance(peerId) {
+        const peerOptions = {
             host: '0.peerjs.com',
             port: 443,
             secure: true,
             debug: 2
-        });
+        };
 
-        sharePeer.on('open', (id) => {
-            if (hostId) {
-                // 作为客户端连接
-                updateShareStatus("正在连接到主机...", "connecting");
-                connectToSharePeer(hostId);
-            } else {
-                // 作为主机
-                isShareHost = true;
-                updateShareStatus(`主机已就绪 (ID: ${id})`, "connected");
-                generateShareQRCode(id);
-                setupShareData();
+        // 如果有peerId，使用该ID创建实例
+        if (peerId) {
+            peerOptions.id = peerId;
+            console.log('创建Peer实例时指定ID:', peerId);
+        }
+
+        const newPeer = new Peer(peerId, peerOptions);
+
+        newPeer.on('error', (err) => {
+            console.error('Peer实例错误:', err);
+            if (err.type === 'unavailable-id') {
+                console.warn('指定的ID不可用，需要重新生成');
+                // 如果指定的ID不可用，清除存储的ID并重新初始化
+                localStorage.removeItem('peerShareData');
+                setTimeout(initShareConnection, 500);
             }
         });
 
+        return newPeer;
+    }
+
+    // ========== 初始化共享连接 ==========
+    function initShareConnection() {
+        updateShareStatus("正在初始化连接...", "connecting");
+
+        // 检查 QRCode.js 是否已加载
+        if (typeof QRCode === 'undefined') {
+            console.error('QRCode.js 未加载');
+            updateShareStatus("QRCode.js 未加载", "error");
+            return;
+        }
+
+        // 检查 PeerJS 是否已加载
+        if (typeof Peer === 'undefined') {
+            console.error('PeerJS 未加载');
+            updateShareStatus("PeerJS 未加载", "error");
+            return;
+        }
+
+        // 尝试从URL获取主机ID（客户端情况）
+        const urlParams = new URLSearchParams(window.location.search);
+        const hostId = urlParams.get('share');
+
+        if (hostId) {
+            // 作为客户端连接到主机
+            updateShareStatus("正在连接到主机...", "connecting");
+
+            // 客户端不需要自己的ID，直接创建Peer实例
+            sharePeer = new Peer({
+                host: '0.peerjs.com',
+                port: 443,
+                secure: true,
+                debug: 2
+            });
+
+            sharePeer.on('open', () => {
+                connectToSharePeer(hostId);
+            });
+
+            setupPeerEvents();
+            return;
+        }
+
+        // 作为主机创建连接
+        isShareHost = true;
+
+        // 检查本地存储中是否已有Peer ID
+        let storedPeerData = localStorage.getItem('peerShareData');
+        let storedPeerId = null;
+
+        if (storedPeerData) {
+            try {
+                const peerData = JSON.parse(storedPeerData);
+                storedPeerId = peerData.peerId;
+                console.log('使用存储的Peer ID:', storedPeerId);
+            } catch (e) {
+                console.error('解析存储的Peer数据失败:', e);
+            }
+        }
+
+        // 创建Peer实例时使用存储的ID
+        const peerOptions = {
+            host: '0.peerjs.com',
+            port: 443,
+            secure: true,
+            debug: 2
+        };
+
+        // 如果有存储的ID，使用该ID创建Peer实例
+        if (storedPeerId) {
+            peerOptions.id = storedPeerId;
+            console.log('使用存储的ID创建Peer实例');
+        }
+
+        sharePeer = new Peer(storedPeerId, peerOptions);
+
+        sharePeer.on('open', (id) => {
+            console.log('Peer连接已打开，ID:', id);
+
+            // 如果是新生成的ID或者之前没有存储过，保存到localStorage
+            if (!storedPeerId || id !== storedPeerId) {
+                localStorage.setItem('peerShareData', JSON.stringify({
+                    peerId: id,
+                    createdAt: new Date().toISOString()
+                }));
+                console.log('新Peer ID已保存到localStorage');
+            } else {
+                console.log('继续使用现有Peer ID');
+            }
+
+            updateShareStatus(`主机已就绪 (ID: ${id})`, "connected");
+            generateShareQRCode(id);
+            setupShareData();
+        });
+
+        setupPeerEvents();
+    }
+
+    // ========== 设置Peer事件 ==========
+    function setupPeerEvents() {
         sharePeer.on('connection', (conn) => {
+            console.log('收到连接请求');
             setupShareConnection(conn);
         });
 
@@ -1843,9 +1943,6 @@
             if (err.type === 'peer-unavailable') {
                 updateShareStatus("错误: 无法连接到主机，请确认主机是否在线", "error");
             }
-
-            // 尝试重新连接
-            setTimeout(initShareConnection, 5000);
         });
 
         sharePeer.on('disconnected', () => {
@@ -1926,76 +2023,108 @@
         console.log('开始生成二维码，Peer ID:', peerId);
         const url = `${window.location.origin}${window.location.pathname}?share=${peerId}`;
         console.log('二维码链接:', url);
-        const qrCanvas = document.getElementById('qrCanvas');
+        const qrContainer = document.getElementById('shareQRCode');
 
-        // 确保canvas元素存在
-        if (!qrCanvas) {
-            console.error('找不到二维码canvas元素');
+        // 确保容器元素存在
+        if (!qrContainer) {
+            console.error('找不到二维码容器元素');
             updateShareStatus("页面元素错误", "error");
             return;
         }
 
-        console.log('找到 qrCanvas 元素:', qrCanvas);
-        console.log('QRCode 对象:', typeof QRCode, QRCode);
+        // 创建新的canvas元素
+        qrContainer.innerHTML = '<canvas id="qrCanvas" width="160" height="160"></canvas>';
+        const qrCanvas = document.getElementById('qrCanvas');
+
+        console.log('创建 qrCanvas 元素:', qrCanvas);
 
         try {
-            // 清除现有内容
-            const ctx = qrCanvas.getContext('2d');
-            ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
-            console.log('已清除画布内容');
-
             // 检查 QRCode 库的可用性
-            if (!QRCode) {
+            if (typeof QRCode === 'undefined') {
                 console.error('QRCode.js 库未加载');
                 updateShareStatus("QRCode.js 未加载", "error");
-                showTextLink(url);
+                showTextLink(url, qrContainer);
                 return;
             }
 
-            // 使用不同的方式生成二维码，确保兼容性
-            if (typeof QRCode.toCanvas === 'function') {
-                console.log('使用 QRCode.toCanvas 方法');
-                // 使用简单的配置避免错误
-                QRCode.toCanvas(qrCanvas, url, {
-                    width: 160,
-                    margin: 2,
-                    color: {
-                        dark: "#2c3e50",
-                        light: "#ffffff"
-                    }
-                }, (err) => {
-                    if (err) {
+            console.log('QRCode 对象结构:', typeof QRCode);
+
+            // 使用简单的配置生成二维码
+            const options = {
+                width: 160,
+                height: 160,
+                margin: 2,
+                color: {
+                    dark: "#2c3e50",
+                    light: "#ffffff"
+                }
+            };
+
+            // 使用 Promise 方式生成二维码
+            if (QRCode.toCanvas && typeof QRCode.toCanvas === 'function') {
+                console.log('使用 QRCode.toCanvas Promise 方式');
+                QRCode.toCanvas(qrCanvas, url, options)
+                    .then(() => {
+                        console.log('二维码生成成功');
+                        updateShareStatus(`主机已就绪 (ID: ${peerId})`, "connected");
+                    })
+                    .catch((err) => {
                         console.error('生成二维码失败:', err);
                         updateShareStatus("生成二维码失败: " + err.message, "error");
-                        showTextLink(url);
+                        showTextLink(url, qrContainer);
+                    });
+            } else {
+                // 使用回调方式
+                console.log('使用 QRCode.toCanvas 回调方式');
+                QRCode.toCanvas(qrCanvas, url, options, (error) => {
+                    if (error) {
+                        console.error('生成二维码失败:', error);
+                        updateShareStatus("生成二维码失败: " + error.message, "error");
+                        showTextLink(url, qrContainer);
                     } else {
                         console.log('二维码生成成功');
                         updateShareStatus(`主机已就绪 (ID: ${peerId})`, "connected");
                     }
                 });
-            } else if (typeof QRCode === 'function') {
-                console.log('使用 QRCode 构造函数方法');
-                // 尝试使用构造函数方式
-                const qrCode = new QRCode(qrCanvas, {
-                    text: url,
-                    width: 160,
-                    height: 160,
-                    colorDark: "#2c3e50",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel ? QRCode.CorrectLevel.M : 'M'
-                });
-                console.log('二维码生成成功');
-                updateShareStatus(`主机已就绪 (ID: ${peerId})`, "connected");
-            } else {
-                console.error('QRCode.js 库结构未知');
-                updateShareStatus("QRCode.js 结构不兼容", "error");
-                showTextLink(url);
             }
         } catch (e) {
             console.error('生成二维码时发生异常:', e);
             updateShareStatus("生成二维码异常: " + e.message, "error");
-            showTextLink(url);
+            showTextLink(url, qrContainer);
         }
+    }
+
+    // ========== 显示文本链接 ==========
+    function showTextLink(url, container) {
+        if (container) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 15px; color: #333; background: white; border-radius: 10px;">
+                    <p style="margin: 0 0 10px 0; font-weight: bold;">二维码生成失败</p>
+                    <p style="margin: 0 0 15px 0; font-size: 12px;">请复制下方链接发送给其他人</p>
+                    <textarea
+                        readonly
+                        style="width: 100%; height: 60px; font-size: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 5px; resize: none;"
+                        onclick="this.select()"
+                    >${url}</textarea>
+                    <button
+                        onclick="copyTextLink('${url}')"
+                        style="margin-top: 10px; background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
+                        复制链接
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    // ========== 复制文本链接 ==========
+    function copyTextLink(url) {
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('链接已复制到剪贴板！');
     }
 
     // ========== 复制分享链接 ==========
@@ -2016,7 +2145,11 @@
 
     // ========== 重置共享连接 ==========
     function resetShareConnection() {
-        if (confirm("确定要重置共享连接吗？当前连接将断开")) {
+        if (confirm("确定要重置共享连接吗？当前连接将断开，房间ID将重新生成")) {
+            // 清除保存的Peer ID
+            localStorage.removeItem('peerShareData');
+            console.log('已清除保存的Peer ID');
+
             if (sharePeer) {
                 sharePeer.destroy();
                 sharePeer = null;
@@ -2028,10 +2161,11 @@
             updateShareStatus("正在重新初始化...", "connecting");
             updateConnectedDevices(0);
 
-            // 清除二维码
-            const qrCanvas = document.getElementById('qrCanvas');
-            const ctx = qrCanvas.getContext('2d');
-            ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+            // 清除二维码显示内容
+            const qrContainer = document.getElementById('shareQRCode');
+            if (qrContainer) {
+                qrContainer.innerHTML = '<div style="color: #666; font-size: 14px;">正在重新生成二维码...</div>';
+            }
 
             // 重新初始化
             setTimeout(initShareConnection, 500);
