@@ -1403,18 +1403,39 @@
     function renderPeople() {
         const container = document.getElementById('peopleContainer');
         container.innerHTML = '';
+
+        // 确保 members 是一个数组
+        if (!Array.isArray(members)) {
+            members = [];
+        }
+
         const isEnded = isTableEnded();
 
-        const points = members.map(m => m.point);
-        const maxPoint = Math.max(...points);
-        const minPoint = Math.min(...points);
+        // 确保所有成员都有必要的属性
+        const safeMembers = members.map(member => ({
+            id: member.id || Date.now() + Math.floor(Math.random() * 1000),
+            name: member.name || '未知用户',
+            joinTime: member.joinTime || null,
+            totalTime: member.totalTime || 0,
+            point: member.point !== undefined ? member.point : 0,
+            finalBalance: member.finalBalance || 0,
+            active: member.active !== undefined ? member.active : false,
+            history: Array.isArray(member.history) ? member.history : [],
+            undoDisabled: member.undoDisabled || false,
+            ...member
+        }));
+
+        // 安全地获取积分数组
+        const points = safeMembers.map(m => m.point || 0);
+        const maxPoint = points.length > 0 ? Math.max(...points) : 0;
+        const minPoint = points.length > 0 ? Math.min(...points) : 0;
 
         const maxCount = points.filter(b => b === maxPoint).length;
         const minCount = points.filter(b => b === minPoint).length;
 
-        const showEmoji = members.length >= 2;
+        const showEmoji = safeMembers.length >= 2;
 
-        members.forEach(member => {
+        safeMembers.forEach(member => {
             const div = document.createElement('div');
             div.className = 'person';
 
@@ -1440,34 +1461,34 @@
             const isMinUnique = minCount === 1 && member.point === minPoint;
 
             div.innerHTML = `
-                <div class="person-header">
-                    <div class="avatar">${member.name.charAt(0).toUpperCase()}</div>
-                    <div class="person-info">
-                        <div class="person-name">
-                            ${member.name}
-                            ${showEmoji && isMaxUnique ? ' 🔥' : ''}
-                            ${showEmoji && isMinUnique ? ' 💧' : ''}
+            <div class="person-header">
+                <div class="avatar">${(member.name || '未知').charAt(0).toUpperCase()}</div>
+                <div class="person-info">
+                    <div class="person-name">
+                        ${member.name || '未知用户'}
+                        ${showEmoji && isMaxUnique ? ' 🔥' : ''}
+                        ${showEmoji && isMinUnique ? ' 💧' : ''}
+                    </div>
+                    <div class="person-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">状态</div>
+                            <div class="stat-value ${member.active ? 'status' : 'status offline'}">${status}</div>
                         </div>
-                        <div class="person-stats">
-                            <div class="stat-item">
-                                <div class="stat-label">状态</div>
-                                <div class="stat-value ${member.active ? 'status' : 'status offline'}">${status}</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">积分</div>
-                                ${member.point < 0
-                ? `<div class="stat-value point point-negative">${member.point.toFixed(2)} 分</div>`
-                : `<div class="stat-value point point-positive">${member.point.toFixed(2)} 分</div>`
+                        <div class="stat-item">
+                            <div class="stat-label">积分</div>
+                            ${(member.point || 0) < 0
+                ? `<div class="stat-value point point-negative">${(member.point || 0).toFixed(2)} 分</div>`
+                : `<div class="stat-value point point-positive">${(member.point || 0).toFixed(2)} 分</div>`
             }
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">费用</div>
-                                <div class="stat-value cost">${costText}</div>
-                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">费用</div>
+                            <div class="stat-value cost">${costText}</div>
                         </div>
                     </div>
                 </div>
-                    ${(() => {
+            </div>
+                ${(() => {
                 const isStarted = !!startTime;
                 const isEnded = isTableEnded();
 
@@ -1477,30 +1498,31 @@
                 } else if (!isStarted) {
                     // 未开台：只显示删除按钮
                     return `
-                <div class="actions">
-                    <button class="delete-btn" onclick="deleteMember(${member.id})">
-                        <i class="fas fa-trash"></i> 删除
-                    </button>
-                </div>
-            `;
+            <div class="actions">
+                <button class="delete-btn" onclick="deleteMember(${member.id})">
+                    <i class="fas fa-trash"></i> 删除
+                </button>
+            </div>
+        `;
                 } else {
                     // 开台中：保留原有按钮
                     return `
-                <div class="actions">
-                    ${member.active ? `<button onclick="leaveMember(${member.id})"><i class="fas fa-sign-out-alt"></i> 退出</button>` : ''}
-                    ${!member.active ? `<button onclick="rejoinMember(${member.id})"><i class="fas fa-sign-in-alt"></i> 加入</button>` : ''}
-                    <button onclick="openGiveScoreModal(${member.id})"><i class="fas fa-coins"></i> 掏分</button>
-                    ${member.history.length > 0 ? `<button onclick="showHistory(${member.id})"><i class="fas fa-history"></i> 记录</button>` : ''}
-                    ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})"><i class="fas fa-undo"></i> 撤回</button>` : ''}
-                </div>
-            `;
+            <div class="actions">
+                ${member.active ? `<button onclick="leaveMember(${member.id})"><i class="fas fa-sign-out-alt"></i> 退出</button>` : ''}
+                ${!member.active ? `<button onclick="rejoinMember(${member.id})"><i class="fas fa-sign-in-alt"></i> 加入</button>` : ''}
+                <button onclick="openGiveScoreModal(${member.id})"><i class="fas fa-coins"></i> 掏分</button>
+                ${Array.isArray(member.history) && member.history.length > 0 ? `<button onclick="showHistory(${member.id})"><i class="fas fa-history"></i> 记录</button>` : ''}
+                ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})"><i class="fas fa-undo"></i> 撤回</button>` : ''}
+            </div>
+        `;
                 }
             })()}
-            `;
+        `;
             container.appendChild(div);
         });
 
-        document.getElementById('btnStart').disabled = members.length === 0;
+        // 确保 members 是数组后再检查长度
+        document.getElementById('btnStart').disabled = !Array.isArray(safeMembers) || safeMembers.length === 0;
         updateButtonStates();
     }
 
@@ -1875,8 +1897,7 @@
             waterFeeRate: getNumberInput('waterFeeRate'),
             waterFeeTarget: getNumberInput('waterFeeTarget'),
             members: members,
-            logContent: document.getElementById('log').textContent,
-            // 其他设置...
+            logContent: document.getElementById('log').textContent || '',
         };
 
         // 创建房间数据，包含当前本地数据
@@ -1944,69 +1965,81 @@
     }
 
     function updateLocalDataFromRoom(roomData) {
-        // 更新设置
-        const settings = roomData.settings || {};
-        if (settings.hourlyRate !== undefined) {
-            document.getElementById('hourlyRate').value = settings.hourlyRate;
-            hourlyRate = settings.hourlyRate;
-        }
-        if (settings.waterFeeRate !== undefined) {
-            document.getElementById('waterFeeRate').value = settings.waterFeeRate;
-            waterFeeRate = settings.waterFeeRate;
-        }
-        if (settings.waterFeeTarget !== undefined) {
-            document.getElementById('waterFeeTarget').value = settings.waterFeeTarget;
-            waterFeeTarget = settings.waterFeeTarget;
-        }
+        // 确保 roomData 存在
+        if (!roomData) return;
 
-        // 更新日志
-        if (roomData.logs !== undefined) {
-            document.getElementById('log').textContent = roomData.logs;
-        }
+        try {
+            // 更新设置
+            const settings = roomData.settings || {};
+            if (settings.hourlyRate !== undefined) {
+                document.getElementById('hourlyRate').value = settings.hourlyRate;
+                hourlyRate = settings.hourlyRate;
+            }
+            if (settings.waterFeeRate !== undefined) {
+                document.getElementById('waterFeeRate').value = settings.waterFeeRate;
+                waterFeeRate = settings.waterFeeRate;
+            }
+            if (settings.waterFeeTarget !== undefined) {
+                document.getElementById('waterFeeTarget').value = settings.waterFeeTarget;
+                waterFeeTarget = settings.waterFeeTarget;
+            }
 
-        // 更新成员列表
-        const newMembers = parseMembersFromFirebase(roomData.members);
+            // 更新日志
+            if (roomData.logs !== undefined) {
+                document.getElementById('log').textContent = roomData.logs || '';
+            }
 
-        // 检查成员是否有实质性变化再更新
-        if (JSON.stringify(members) !== JSON.stringify(newMembers)) {
-            members = newMembers;
-            renderPeople();
-        }
+            // 更新成员列表
+            if (roomData.members) {
+                const newMembers = parseMembersFromFirebase(roomData.members);
 
-        // 更新开台状态
-        if (settings.startTime) {
-            const newStartTime = new Date(settings.startTime);
-            if (!startTime || startTime.getTime() !== newStartTime.getTime()) {
-                startTime = newStartTime;
-                document.getElementById('btnStart').disabled = true;
-                document.getElementById('btnEnd').disabled = false;
-                disableInputs();
-
-                // 启动计时器
-                if (!timerInterval) {
-                    timerInterval = setInterval(updateCosts, 1000);
-                }
-                if (!durationInterval) {
-                    durationInterval = setInterval(() => {
-                        if (startTime) {
-                            const elapsed = new Date() - startTime;
-                            document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>${formatDuration(elapsed)}</span>`;
-                        }
-                    }, 1000);
+                // 检查成员是否有实质性变化再更新
+                if (JSON.stringify(members || []) !== JSON.stringify(newMembers || [])) {
+                    members = newMembers || [];
+                    renderPeople();
                 }
             }
-        } else {
-            if (startTime) {
-                startTime = null;
-                document.getElementById('btnStart').disabled = members.length === 0;
-                document.getElementById('btnEnd').disabled = true;
-                enableInputs();
-            }
-        }
 
-        // 重新渲染页面
-        updateCosts();
-        updateButtonStates();
+            // 更新开台状态
+            if (settings.startTime) {
+                const newStartTime = new Date(settings.startTime);
+                if (!startTime || (startTime && startTime.getTime() !== newStartTime.getTime())) {
+                    startTime = newStartTime;
+                    document.getElementById('btnStart').disabled = true;
+                    document.getElementById('btnEnd').disabled = false;
+                    disableInputs();
+
+                    // 启动计时器
+                    if (!timerInterval) {
+                        timerInterval = setInterval(updateCosts, 1000);
+                    }
+                    if (!durationInterval) {
+                        durationInterval = setInterval(() => {
+                            if (startTime) {
+                                const elapsed = new Date() - startTime;
+                                document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>${formatDuration(elapsed)}</span>`;
+                            }
+                        }, 1000);
+                    }
+                }
+            } else {
+                if (startTime) {
+                    startTime = null;
+                    document.getElementById('btnStart').disabled = !Array.isArray(members) || (members || []).length === 0;
+                    document.getElementById('btnEnd').disabled = true;
+                    enableInputs();
+                }
+            }
+
+            // 重新渲染页面
+            updateCosts();
+            updateButtonStates();
+
+            // 保存到本地存储
+            saveDataToLocalStorage();
+        } catch (e) {
+            console.error("更新本地数据时出错:", e);
+        }
     }
 
     // 将成员数据格式化为适合Firebase存储的格式
@@ -2025,16 +2058,55 @@
 
     // 从Firebase格式还原成员数据
     function parseMembersFromFirebase(membersObj) {
-        if (!membersObj) return [];
+        // 如果没有数据，返回空数组
+        if (!membersObj || typeof membersObj !== 'object') {
+            return [];
+        }
 
-        // 将对象转换为数组
-        return Object.values(membersObj).map(member => {
-            // 确保时间字段正确转换
-            if (member.joinTime && typeof member.joinTime === 'string') {
-                member.joinTime = new Date(member.joinTime);
-            }
-            return member;
-        });
+        try {
+            // 将对象转换为数组
+            const membersArray = Object.values(membersObj);
+
+            // 确保每个成员都有必要的属性
+            return membersArray.map(member => {
+                try {
+                    // 确保时间字段正确转换
+                    if (member && member.joinTime && typeof member.joinTime === 'string') {
+                        member.joinTime = new Date(member.joinTime);
+                    }
+
+                    // 确保必要的属性存在
+                    return {
+                        id: member.id || Date.now() + Math.floor(Math.random() * 1000),
+                        name: member.name || '未知用户',
+                        joinTime: member.joinTime || null,
+                        totalTime: member.totalTime || 0,
+                        point: member.point !== undefined ? member.point : 0,
+                        finalBalance: member.finalBalance || 0,
+                        active: member.active !== undefined ? member.active : false,
+                        history: Array.isArray(member.history) ? member.history : [],
+                        undoDisabled: member.undoDisabled || false,
+                        ...member
+                    };
+                } catch (e) {
+                    console.error("处理成员数据时出错:", e);
+                    return {
+                        id: Date.now() + Math.floor(Math.random() * 1000),
+                        name: '未知用户',
+                        joinTime: null,
+                        totalTime: 0,
+                        point: 0,
+                        finalBalance: 0,
+                        active: false,
+                        history: [],
+                        undoDisabled: false
+                    };
+                }
+            });
+        } catch (e) {
+            console.error("解析Firebase成员数据时出错:", e);
+            return [];
+        }
     }
 
     // 显示创建房间模态框
@@ -2219,9 +2291,6 @@
 
         // 发送加入房间的通知
         log(`${getUserName()} 加入了房间`);
-        if (isRoomOwner) {
-            syncAllDataToFirebase();
-        }
     }
 
     function getUserName() {
