@@ -1008,7 +1008,7 @@
             renderPeople();
 
             // 同步到Firebase
-            syncMembersToFirebase();
+            syncAllDataToFirebase();
         }
         saveDataToLocalStorage();
         document.getElementById('inputModal').style.display = 'none';
@@ -1044,7 +1044,7 @@
             saveDataToLocalStorage();
 
             // 同步到Firebase
-            syncMembersToFirebase();
+            syncAllDataToFirebase();
         }
     }
 
@@ -1058,7 +1058,7 @@
             speak(`${member.name} 再次加入房间`);
             renderPeople();
             // 同步到Firebase
-            syncMembersToFirebase();
+            syncAllDataToFirebase();
         }
         saveDataToLocalStorage();
     }
@@ -1171,7 +1171,7 @@
         saveDataToLocalStorage();
 
         // 同步到Firebase
-        syncMembersToFirebase();
+        syncAllDataToFirebase();
     }
 
     function showHistory(id) {
@@ -1328,10 +1328,7 @@
 
         // 同步开台状态到Firebase
         if (currentRoomRef && isRoomOwner) {
-            const {update} = window.firebaseDB;
-            update(currentRoomRef, {
-                'settings/startTime': startTime.toISOString()
-            });
+            syncAllDataToFirebase();
         }
     }
 
@@ -1365,6 +1362,11 @@
         logUseDate(now, `关台成功，总费用：${totalTableCost.toFixed(2)} 元\n`);
         speak(`关台成功，总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
         alert(`总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
+
+        // 同步关台状态到Firebase
+        if (currentRoomRef && isRoomOwner) {
+            syncAllDataToFirebase();
+        }
 
         const dataStr = localStorage.getItem('tableData');
         if (dataStr) {
@@ -1513,7 +1515,7 @@
             saveDataToLocalStorage();
 
             // 同步到Firebase
-            syncMembersToFirebase();
+            syncAllDataToFirebase();
         }
     }
 
@@ -1631,7 +1633,7 @@
         saveDataToLocalStorage();
 
         // 同步到Firebase
-        syncMembersToFirebase();
+        syncAllDataToFirebase();
     }
 
     function hasUnReversedOut(member) {
@@ -1867,18 +1869,29 @@
         const userId = 'user-' + Date.now();
         localStorage.setItem('userId', userId);
 
-        // 创建房间数据
+        // 准备要同步的本地数据
+        const localData = {
+            hourlyRate: getNumberInput('hourlyRate'),
+            waterFeeRate: getNumberInput('waterFeeRate'),
+            waterFeeTarget: getNumberInput('waterFeeTarget'),
+            members: members,
+            logContent: document.getElementById('log').textContent,
+            // 其他设置...
+        };
+
+        // 创建房间数据，包含当前本地数据
         const roomData = {
             createdAt: serverTimestamp(),
             owner: userId,  // 设置当前用户为房主
-            members: {},
+            members: formatMembersForFirebase(members),
             settings: {
-                hourlyRate: getNumberInput('hourlyRate'),
-                waterFeeRate: getNumberInput('waterFeeRate'),
-                waterFeeTarget: getNumberInput('waterFeeTarget'),
-                isEnded: false,
-                startTime: null
-            }
+                hourlyRate: localData.hourlyRate,
+                waterFeeRate: localData.waterFeeRate,
+                waterFeeTarget: localData.waterFeeTarget,
+                isEnded: isTableEnded(),
+                startTime: startTime ? startTime.toISOString() : null
+            },
+            logs: localData.logContent
         };
 
         // 保存房间数据
@@ -1916,7 +1929,7 @@
         onValue(currentRoomRef, (snapshot) => {
             const roomData = snapshot.val();
             if (roomData) {
-                updateLocalData(roomData);
+                updateLocalDataFromRoom(roomData);
             }
         });
 
@@ -1927,6 +1940,100 @@
                 localStorage.removeItem('userId');
                 window.location.href = "https://roger-fly.github.io/billiards/";
             }
+        });
+    }
+
+    function updateLocalDataFromRoom(roomData) {
+        // 更新设置
+        const settings = roomData.settings || {};
+        if (settings.hourlyRate !== undefined) {
+            document.getElementById('hourlyRate').value = settings.hourlyRate;
+            hourlyRate = settings.hourlyRate;
+        }
+        if (settings.waterFeeRate !== undefined) {
+            document.getElementById('waterFeeRate').value = settings.waterFeeRate;
+            waterFeeRate = settings.waterFeeRate;
+        }
+        if (settings.waterFeeTarget !== undefined) {
+            document.getElementById('waterFeeTarget').value = settings.waterFeeTarget;
+            waterFeeTarget = settings.waterFeeTarget;
+        }
+
+        // 更新日志
+        if (roomData.logs !== undefined) {
+            document.getElementById('log').textContent = roomData.logs;
+        }
+
+        // 更新成员列表
+        const newMembers = parseMembersFromFirebase(roomData.members);
+
+        // 检查成员是否有实质性变化再更新
+        if (JSON.stringify(members) !== JSON.stringify(newMembers)) {
+            members = newMembers;
+            renderPeople();
+        }
+
+        // 更新开台状态
+        if (settings.startTime) {
+            const newStartTime = new Date(settings.startTime);
+            if (!startTime || startTime.getTime() !== newStartTime.getTime()) {
+                startTime = newStartTime;
+                document.getElementById('btnStart').disabled = true;
+                document.getElementById('btnEnd').disabled = false;
+                disableInputs();
+
+                // 启动计时器
+                if (!timerInterval) {
+                    timerInterval = setInterval(updateCosts, 1000);
+                }
+                if (!durationInterval) {
+                    durationInterval = setInterval(() => {
+                        if (startTime) {
+                            const elapsed = new Date() - startTime;
+                            document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>${formatDuration(elapsed)}</span>`;
+                        }
+                    }, 1000);
+                }
+            }
+        } else {
+            if (startTime) {
+                startTime = null;
+                document.getElementById('btnStart').disabled = members.length === 0;
+                document.getElementById('btnEnd').disabled = true;
+                enableInputs();
+            }
+        }
+
+        // 重新渲染页面
+        updateCosts();
+        updateButtonStates();
+    }
+
+    // 将成员数据格式化为适合Firebase存储的格式
+    function formatMembersForFirebase(membersArray) {
+        const membersObj = {};
+        membersArray.forEach((member, index) => {
+            // 确保日期对象正确序列化
+            const memberCopy = {...member};
+            if (memberCopy.joinTime instanceof Date) {
+                memberCopy.joinTime = memberCopy.joinTime.toISOString();
+            }
+            membersObj[`member_${index}`] = memberCopy;
+        });
+        return membersObj;
+    }
+
+    // 从Firebase格式还原成员数据
+    function parseMembersFromFirebase(membersObj) {
+        if (!membersObj) return [];
+
+        // 将对象转换为数组
+        return Object.values(membersObj).map(member => {
+            // 确保时间字段正确转换
+            if (member.joinTime && typeof member.joinTime === 'string') {
+                member.joinTime = new Date(member.joinTime);
+            }
+            return member;
         });
     }
 
@@ -2109,6 +2216,18 @@
 
         // 设置房间监听器
         setupRoomListeners();
+
+        // 发送加入房间的通知
+        log(`${getUserName()} 加入了房间`);
+        if (isRoomOwner) {
+            syncAllDataToFirebase();
+        }
+    }
+
+    function getUserName() {
+        // 可以从localStorage或其他地方获取用户名
+        // 这里简单返回"用户"
+        return "用户";
     }
 
     // 关闭房间函数
@@ -2364,24 +2483,38 @@
         }
     });
 
-    // 同步成员数据到Firebase
+    function syncAllDataToFirebase() {
+        if (currentRoomRef && isRoomOwner) {
+            const {update} = window.firebaseDB;
+
+            // 收集所有需要同步的数据
+            const dataToSync = {
+                'settings/hourlyRate': getNumberInput('hourlyRate'),
+                'settings/waterFeeRate': getNumberInput('waterFeeRate'),
+                'settings/waterFeeTarget': getNumberInput('waterFeeTarget'),
+                'settings/startTime': startTime ? startTime.toISOString() : null,
+                'settings/isEnded': isTableEnded(),
+                'members': formatMembersForFirebase(members),
+                'logs': document.getElementById('log').textContent
+            };
+
+            update(currentRoomRef, dataToSync).catch(error => {
+                console.error("同步房间数据失败:", error);
+            });
+        }
+    }
+
+    // 修改现有的syncMembersToFirebase函数
     function syncMembersToFirebase() {
         if (currentRoomRef && isRoomOwner) {
             const {update} = window.firebaseDB;
-            // 将成员数组转换为对象格式以便Firebase存储
-            const membersObj = {};
-            members.forEach((member, index) => {
-                // 确保日期对象正确序列化
-                const memberCopy = {...member};
-                if (memberCopy.joinTime instanceof Date) {
-                    memberCopy.joinTime = memberCopy.joinTime.toISOString();
-                }
-                membersObj[`member_${index}`] = memberCopy;
-            });
 
-            update(currentRoomRef, {
-                members: membersObj
-            }).catch(error => {
+            const dataToSync = {
+                'members': formatMembersForFirebase(members),
+                'logs': document.getElementById('log').textContent
+            };
+
+            update(currentRoomRef, dataToSync).catch(error => {
                 console.error("同步成员数据失败:", error);
             });
         }
