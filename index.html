@@ -1325,7 +1325,7 @@
         speak("我在小铁很想虐你，就是战别BB！");
         saveDataToLocalStorage();
 
-        // 同步开台状态到Firebase
+        // 同步开台状态到Firebase，确保所有参与者都能看到
         syncAllDataToFirebase();
     }
 
@@ -1360,7 +1360,7 @@
         speak(`关台成功，总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
         alert(`总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
 
-        // 同步关台状态到Firebase
+        // 同步关台状态到Firebase，确保所有参与者都能看到
         syncAllDataToFirebase();
 
         const dataStr = localStorage.getItem('tableData');
@@ -1375,7 +1375,7 @@
         updateButtonStates();
 
         // 同步关台状态到Firebase
-        if (currentRoomRef && isRoomOwner) {
+        if (currentRoomRef) {
             const {update} = window.firebaseDB;
             update(currentRoomRef, {
                 'settings/startTime': null
@@ -1578,6 +1578,9 @@
             }
             renderPeople();
             clearLocalStorageData();
+
+            // 同步重置状态到Firebase，确保所有参与者都能看到
+            syncAllDataToFirebase();
         }
         saveDataToLocalStorage();
     }
@@ -1986,6 +1989,12 @@
                 needToUpdateUI = true;
             }
 
+            // 更新水费收集金额
+            if (roomData.collectedWaterFee !== undefined && roomData.collectedWaterFee !== collectedWaterFee) {
+                collectedWaterFee = roomData.collectedWaterFee;
+                needToUpdateUI = true;
+            }
+
             // 更新日志
             if (roomData.logs !== undefined && roomData.logs !== document.getElementById('log').textContent) {
                 document.getElementById('log').textContent = roomData.logs || '';
@@ -2034,6 +2043,31 @@
                     enableInputs();
                     needToUpdateUI = true;
                 }
+            }
+
+            // 更新关台相关设置
+            if (settings.scheduledEndTime !== undefined) {
+                if (settings.scheduledEndTime) {
+                    scheduledEndTime = new Date(settings.scheduledEndTime);
+                } else {
+                    scheduledEndTime = null;
+                }
+            }
+
+            if (settings.endMode !== undefined) {
+                const select = document.getElementById("endModeSelect");
+                if (select.value !== settings.endMode) {
+                    select.value = settings.endMode;
+                    toggleEndOptions();
+                }
+            }
+
+            if (settings.endTime !== undefined) {
+                document.getElementById("endTimeInput").value = settings.endTime || "";
+            }
+
+            if (settings.duration !== undefined) {
+                document.getElementById("durationInput").value = settings.duration || "";
             }
 
             // 检查是否结束状态有变化
@@ -2304,6 +2338,9 @@
 
         // 发送加入房间的通知
         log(`${getUserName()} 加入了房间`);
+
+        // 确保按钮显示正确
+        updateRoomButton();
     }
 
     function getUserName() {
@@ -2355,7 +2392,7 @@
         if (!button) return; // 确保按钮存在
 
         if (currentRoomId) {
-            // 所有房间内成员都可以看到关闭房间按钮（不再检查isRoomOwner）
+            // 所有房间内成员都可以看到关闭房间按钮
             button.innerHTML = '<i class="fas fa-door-closed"></i> <span id="roomButtonText">关闭房间</span>';
             button.disabled = false;
             button.style.display = 'inline-block';
@@ -2545,10 +2582,14 @@
                 }, 200);
             }
         } else {
-            // 隐藏创建房间按钮（成员页面）
-            createRoomBtn.style.display = 'none';
+            // 对于房间成员，也显示关闭房间按钮
+            createRoomBtn.style.display = 'inline-block';
             // 加入房间
             joinRoom(roomId);
+            // 更新按钮为关闭房间按钮
+            setTimeout(() => {
+                updateRoomButton();
+            }, 100);
         }
 
         document.addEventListener("visibilitychange", () => {
@@ -2585,15 +2626,20 @@
         if (currentRoomRef) {
             const {update} = window.firebaseDB;
 
-            // 收集所有需要同步的数据
+            // 收集所有需要同步的数据，确保全量同步
             const dataToSync = {
                 'settings/hourlyRate': getNumberInput('hourlyRate'),
                 'settings/waterFeeRate': getNumberInput('waterFeeRate'),
                 'settings/waterFeeTarget': getNumberInput('waterFeeTarget'),
                 'settings/startTime': startTime ? startTime.toISOString() : null,
                 'settings/isEnded': isTableEnded(),
+                'settings/scheduledEndTime': scheduledEndTime ? scheduledEndTime.toISOString() : null,
+                'settings/endMode': document.getElementById("endModeSelect").value,
+                'settings/endTime': document.getElementById("endTimeInput").value,
+                'settings/duration': document.getElementById("durationInput").value,
                 'members': formatMembersForFirebase(members),
-                'logs': document.getElementById('log').textContent
+                'logs': document.getElementById('log').textContent,
+                'collectedWaterFee': collectedWaterFee
             };
 
             update(currentRoomRef, dataToSync).catch(error => {
@@ -2610,7 +2656,8 @@
 
             const dataToSync = {
                 'members': formatMembersForFirebase(members),
-                'logs': document.getElementById('log').textContent
+                'logs': document.getElementById('log').textContent,
+                'collectedWaterFee': collectedWaterFee
             };
 
             update(currentRoomRef, dataToSync).catch(error => {
