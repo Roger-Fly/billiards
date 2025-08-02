@@ -1170,7 +1170,6 @@
         renderPeople();
         saveDataToLocalStorage();
 
-        // 同步到Firebase
         syncAllDataToFirebase();
     }
 
@@ -2325,6 +2324,24 @@
                     currentRoomId = null;
                     isRoomOwner = false;
 
+                    // 清除本地缓存
+                    clearLocalStorageData();
+                    localStorage.removeItem('userId');
+                    localStorage.removeItem('tableData');
+                    localStorage.removeItem('endTime');
+                    localStorage.removeItem('lastTotalCost');
+                    localStorage.removeItem('lastWaterFee');
+                    localStorage.removeItem('lastTotalDuration');
+
+                    // 重置页面状态
+                    hourlyRate = 0;
+                    startTime = null;
+                    scheduledEndTime = null;
+                    collectedWaterFee = 0;
+                    members = [];
+                    if (timerInterval) clearInterval(timerInterval);
+                    if (durationInterval) clearInterval(durationInterval);
+
                     // 跳转到基础链接
                     window.location.href = "https://roger-fly.github.io/billiards/";
                 });
@@ -2338,7 +2355,7 @@
         if (!button) return; // 确保按钮存在
 
         if (currentRoomId) {
-            // 所有房间内成员都可以看到关闭房间按钮
+            // 所有房间内成员都可以看到关闭房间按钮（不再检查isRoomOwner）
             button.innerHTML = '<i class="fas fa-door-closed"></i> <span id="roomButtonText">关闭房间</span>';
             button.disabled = false;
             button.style.display = 'inline-block';
@@ -2564,7 +2581,8 @@
     });
 
     function syncAllDataToFirebase() {
-        if (currentRoomRef && isRoomOwner) {
+        // 移除了isRoomOwner检查，允许所有房间成员同步数据
+        if (currentRoomRef) {
             const {update} = window.firebaseDB;
 
             // 收集所有需要同步的数据
@@ -2586,7 +2604,8 @@
 
     // 修改现有的syncMembersToFirebase函数
     function syncMembersToFirebase() {
-        if (currentRoomRef && isRoomOwner) {
+        // 移除了isRoomOwner检查，允许所有房间成员同步数据
+        if (currentRoomRef) {
             const {update} = window.firebaseDB;
 
             const dataToSync = {
