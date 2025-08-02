@@ -1327,9 +1327,7 @@
         saveDataToLocalStorage();
 
         // 同步开台状态到Firebase
-        if (currentRoomRef && isRoomOwner) {
-            syncAllDataToFirebase();
-        }
+        syncAllDataToFirebase();
     }
 
     function endTable() {
@@ -1364,9 +1362,7 @@
         alert(`总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
 
         // 同步关台状态到Firebase
-        if (currentRoomRef && isRoomOwner) {
-            syncAllDataToFirebase();
-        }
+        syncAllDataToFirebase();
 
         const dataStr = localStorage.getItem('tableData');
         if (dataStr) {
@@ -1971,22 +1967,30 @@
         try {
             // 更新设置
             const settings = roomData.settings || {};
-            if (settings.hourlyRate !== undefined) {
+            let needToUpdateUI = false;
+
+            if (settings.hourlyRate !== undefined && settings.hourlyRate !== hourlyRate) {
                 document.getElementById('hourlyRate').value = settings.hourlyRate;
                 hourlyRate = settings.hourlyRate;
+                needToUpdateUI = true;
             }
-            if (settings.waterFeeRate !== undefined) {
+
+            if (settings.waterFeeRate !== undefined && settings.waterFeeRate !== waterFeeRate) {
                 document.getElementById('waterFeeRate').value = settings.waterFeeRate;
                 waterFeeRate = settings.waterFeeRate;
+                needToUpdateUI = true;
             }
-            if (settings.waterFeeTarget !== undefined) {
+
+            if (settings.waterFeeTarget !== undefined && settings.waterFeeTarget !== waterFeeTarget) {
                 document.getElementById('waterFeeTarget').value = settings.waterFeeTarget;
                 waterFeeTarget = settings.waterFeeTarget;
+                needToUpdateUI = true;
             }
 
             // 更新日志
-            if (roomData.logs !== undefined) {
+            if (roomData.logs !== undefined && roomData.logs !== document.getElementById('log').textContent) {
                 document.getElementById('log').textContent = roomData.logs || '';
+                needToUpdateUI = true;
             }
 
             // 更新成员列表
@@ -2021,6 +2025,7 @@
                             }
                         }, 1000);
                     }
+                    needToUpdateUI = true;
                 }
             } else {
                 if (startTime) {
@@ -2028,12 +2033,22 @@
                     document.getElementById('btnStart').disabled = !Array.isArray(members) || (members || []).length === 0;
                     document.getElementById('btnEnd').disabled = true;
                     enableInputs();
+                    needToUpdateUI = true;
                 }
             }
 
+            // 检查是否结束状态有变化
+            const wasEnded = isTableEnded();
+            const isEnded = settings.isEnded === true;
+            if (wasEnded !== isEnded) {
+                needToUpdateUI = true;
+            }
+
             // 重新渲染页面
-            updateCosts();
-            updateButtonStates();
+            if (needToUpdateUI) {
+                updateCosts();
+                updateButtonStates();
+            }
 
             // 保存到本地存储
             saveDataToLocalStorage();
@@ -2258,7 +2273,6 @@
             // 创建房间
             createRoom();
         } else {
-            // 关闭房间
             closeRoom();
         }
     }
@@ -2324,13 +2338,10 @@
         if (!button) return; // 确保按钮存在
 
         if (currentRoomId) {
-            if (isRoomOwner) {
-                button.innerHTML = '<i class="fas fa-door-closed"></i> <span id="roomButtonText">关闭房间</span>';
-                button.disabled = false;
-                button.style.display = 'inline-block';
-            } else {
-                button.style.display = 'none';
-            }
+            // 所有房间内成员都可以看到关闭房间按钮
+            button.innerHTML = '<i class="fas fa-door-closed"></i> <span id="roomButtonText">关闭房间</span>';
+            button.disabled = false;
+            button.style.display = 'inline-block';
         } else {
             // 检查 Firebase 是否已初始化
             if (typeof window.firebaseDB === 'undefined') {
