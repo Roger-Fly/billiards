@@ -827,14 +827,17 @@
             <div class="modal">
                 <h3><i class="fas fa-qrcode"></i> 房间二维码</h3>
                 <div class="modal-content">
-                    <div id="qrcode" style="margin: 20px auto; width: 200px; height: 200px;"></div>
+                    <div id="qrcode" style="margin: 20px auto; width: 200px; height: 200px; display: flex; align-items: center; justify-content: center;"></div>
                     <div class="input-group" style="margin-top: 20px;">
                         <i class="fas fa-link"></i>
-                        <input type="text" id="roomLink" readonly style="background: #f0f0f0; cursor: pointer;"
+                        <input type="text" id="roomLink" readonly style="background: #f0f0f0; cursor: pointer; padding-left: 40px !important;"
                                onclick="copyRoomLink()">
                     </div>
                 </div>
                 <div class="modal-actions">
+                    <button onclick="goToRoom()" style="background: var(--success);">
+                        <i class="fas fa-sign-in-alt"></i> 进入房间
+                    </button>
                     <button onclick="closeCreateRoomModal()" style="background: var(--accent);">
                         <i class="fas fa-times"></i> 关闭
                     </button>
@@ -1830,14 +1833,24 @@
 
         const {database, ref, set, push, serverTimestamp} = window.firebaseDB;
 
+        // 显示加载状态
+        const createRoomBtn = document.getElementById('btnCreateRoom');
+        const originalHTML = createRoomBtn.innerHTML;
+        createRoomBtn.innerHTML = '<i class="fas fa-sync fa-spin"></i> <span id="roomButtonText">创建中...</span>';
+        createRoomBtn.disabled = true;
+
         // 生成唯一房间ID（使用 push 函数）
         const roomRef = push(ref(database, 'rooms'));
         const roomId = roomRef.key;
 
+        // 生成用户标识
+        const userId = 'user-' + Date.now();
+        localStorage.setItem('userId', userId);
+
         // 创建房间数据
         const roomData = {
             createdAt: serverTimestamp(),
-            owner: null,
+            owner: userId,  // 设置当前用户为房主
             members: [],
             settings: {
                 hourlyRate: getNumberInput('hourlyRate'),
@@ -1852,11 +1865,162 @@
             // 生成房间链接
             const roomLink = `https://roger-fly.github.io/billiards/?room=${roomId}`;
 
-            // 房主创建房间后自动跳转到房间URL
-            window.location.href = roomLink;
+            // 显示二维码模态框
+            showCreateRoomModal(roomLink, roomId);
+
+            // 更新房间状态
+            currentRoomId = roomId;
+            isRoomOwner = true;
+            updateRoomButton();
         }).catch(error => {
             console.error("创建房间失败:", error);
             alert("创建房间失败，请重试");
+            // 恢复按钮状态
+            createRoomBtn.innerHTML = originalHTML;
+            createRoomBtn.disabled = false;
+        });
+    }
+
+    // 显示创建房间模态框
+    function showCreateRoomModal(roomLink, roomId) {
+        // 设置房间链接
+        document.getElementById('roomLink').value = roomLink;
+
+        // 清空之前的二维码
+        const qrcodeContainer = document.getElementById('qrcode');
+        qrcodeContainer.innerHTML = '';
+
+        // 使用 Google Charts API 生成二维码
+        try {
+            // 构造 Google Charts 的二维码 URL
+            const size = 200;
+            const encodedData = encodeURIComponent(roomLink);
+            const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chf=bg,s,FFFFFF&chco=000000&chs=${size}x${size}&chl=${encodedData}`;
+
+            // 创建图片元素
+            const qrImg = document.createElement('img');
+            qrImg.src = qrUrl;
+            qrImg.style.width = `${size}px`;
+            qrImg.style.height = `${size}px`;
+            qrImg.style.margin = '0 auto';
+            qrImg.style.display = 'block';
+            qrImg.alt = '房间二维码';
+            qrImg.onerror = function() {
+                // 如果图片加载失败，显示错误信息
+                qrcodeContainer.innerHTML = '<p style="color: #999; text-align: center; margin: 80px 0;">二维码加载失败，请手动复制链接</p>';
+            };
+
+            // 添加到容器
+            qrcodeContainer.appendChild(qrImg);
+        } catch (e) {
+            console.error("二维码生成失败:", e);
+            qrcodeContainer.innerHTML = '<p style="color: #999; text-align: center; margin: 80px 0;">二维码生成失败，请手动复制链接</p>';
+        }
+
+        // 显示模态框
+        document.getElementById('createRoomModal').style.display = 'flex';
+
+        // 恢复创建房间按钮状态
+        const createRoomBtn = document.getElementById('btnCreateRoom');
+        createRoomBtn.innerHTML = '<i class="fas fa-door-open"></i> <span id="roomButtonText">创建房间</span>';
+        createRoomBtn.disabled = false;
+
+        // 更新房间状态
+        currentRoomId = roomId;
+        isRoomOwner = true;
+        updateRoomButton();
+    }
+
+    // 纯 JavaScript 生成简单二维码（模拟）
+    function generateSimpleQRCode(text, container) {
+        // 创建容器
+        const qrContainer = document.createElement('div');
+        qrContainer.style.width = '200px';
+        qrContainer.style.height = '200px';
+        qrContainer.style.backgroundColor = 'white';
+        qrContainer.style.position = 'relative';
+        qrContainer.style.border = '10px solid white';
+
+        // 创建二维码网格
+        const gridSize = 21; // 标准二维码的最小尺寸
+        const cellSize = 8;
+
+        // 生成伪随机二维码图案
+        for (let row = 0; row < gridSize; row++) {
+            for (let col = 0; col < gridSize; col++) {
+                // 创建单元格
+                const cell = document.createElement('div');
+                cell.style.position = 'absolute';
+                cell.style.width = cellSize + 'px';
+                cell.style.height = cellSize + 'px';
+
+                // 设置位置
+                cell.style.left = (col * cellSize) + 'px';
+                cell.style.top = (row * cellSize) + 'px';
+
+                // 确定颜色（基于简单的伪随机算法）
+                const shouldFill = shouldCellBeFilled(row, col, text);
+                cell.style.backgroundColor = shouldFill ? '#000' : '#fff';
+
+                qrContainer.appendChild(cell);
+            }
+        }
+
+        // 添加定位标记
+        addPositionMarkers(qrContainer, cellSize);
+
+        container.appendChild(qrContainer);
+    }
+
+    // 确定单元格是否应该填充的简单算法
+    function shouldCellBeFilled(row, col, text) {
+        // 边界始终填充
+        if (row === 0 || row === 20 || col === 0 || col === 20) return true;
+
+        // 定位标记区域
+        if ((row < 7 && col < 7) ||
+            (row < 7 && col > 13) ||
+            (row > 13 && col < 7)) {
+            return true;
+        }
+
+        // 中心区域始终不填充
+        if (row > 8 && row < 12 && col > 8 && col < 12) return false;
+
+        // 基于文本的简单哈希算法
+        const hash = (row * 31 + col * 17 + text.length) % 100;
+        return hash > 30; // 大约70%的单元格被填充
+    }
+
+    // 添加定位标记
+    function addPositionMarkers(container, cellSize) {
+        // 创建三个定位标记
+        const positions = [
+            {top: 0, left: 0},
+            {top: 0, left: (21 - 7) * cellSize},
+            {top: (21 - 7) * cellSize, left: 0}
+        ];
+
+        positions.forEach(pos => {
+            const marker = document.createElement('div');
+            marker.style.position = 'absolute';
+            marker.style.width = (7 * cellSize) + 'px';
+            marker.style.height = (7 * cellSize) + 'px';
+            marker.style.border = '2px solid #000';
+            marker.style.backgroundColor = '#fff';
+            marker.style.left = pos.left + 'px';
+            marker.style.top = pos.top + 'px';
+
+            const inner = document.createElement('div');
+            inner.style.position = 'absolute';
+            inner.style.width = (3 * cellSize) + 'px';
+            inner.style.height = (3 * cellSize) + 'px';
+            inner.style.backgroundColor = '#000';
+            inner.style.left = (2 * cellSize) + 'px';
+            inner.style.top = (2 * cellSize) + 'px';
+
+            marker.appendChild(inner);
+            container.appendChild(marker);
         });
     }
 
@@ -1872,11 +2036,23 @@
     }
 
     function joinRoom(roomId) {
+        // 检查 Firebase 是否初始化
         if (typeof window.firebaseDB === 'undefined') {
-            alert('Firebase 正在初始化，请稍后重试');
+            // 等待 Firebase 初始化
+            const checkFirebase = setInterval(() => {
+                if (typeof window.firebaseDB !== 'undefined') {
+                    clearInterval(checkFirebase);
+                    performJoinRoom(roomId);
+                }
+            }, 200);
             return;
         }
 
+        performJoinRoom(roomId);
+    }
+
+    // 实际执行加入房间的函数
+    function performJoinRoom(roomId) {
         const {database, ref, onValue, update} = window.firebaseDB;
 
         currentRoomId = roomId;
@@ -1890,18 +2066,26 @@
                 updateLocalData(roomData);
 
                 // 检查房主身份
-                if (roomData.owner === null) {
+                if (!roomData.owner) {
                     // 如果还没有房主，设置当前用户为房主
                     isRoomOwner = true;
-                    update(currentRoomRef, {owner: 'user-' + Date.now()});
-                    updateRoomButton();
-                } else if (roomData.owner === 'user-' + Date.now()) {
-                    // 当前用户是房主
-                    isRoomOwner = true;
+                    const userId = 'user-' + Date.now();
+                    update(currentRoomRef, {owner: userId});
+                    localStorage.setItem('userId', userId);
                     updateRoomButton();
                 } else {
-                    // 当前用户是成员
-                    isRoomOwner = false;
+                    // 检查当前用户是否为房主
+                    const storedUserId = localStorage.getItem('userId');
+                    if (storedUserId && roomData.owner === storedUserId) {
+                        isRoomOwner = true;
+                    } else if (!storedUserId && roomData.owner.includes('user-')) {
+                        // 如果本地没有存储userId但房间有房主，假设当前用户是成员
+                        isRoomOwner = false;
+                        // 存储房主ID作为参考
+                        localStorage.setItem('userId', 'member-' + Date.now());
+                    } else {
+                        isRoomOwner = false;
+                    }
                     updateRoomButton();
                 }
             }
@@ -1909,9 +2093,10 @@
 
         // 监听房间被删除事件
         onValue(currentRoomRef, (snapshot) => {
-            if (!snapshot.exists()) {
+            if (!snapshot.exists() && currentRoomId) {
                 // 房间已被删除
                 alert("房间已被房主关闭");
+                localStorage.removeItem('userId');
                 window.location.href = "https://roger-fly.github.io/billiards/";
             }
         });
@@ -1939,16 +2124,33 @@
     // 更新房间按钮显示
     function updateRoomButton() {
         const button = document.getElementById('btnCreateRoom');
-        const text = document.getElementById('roomButtonText');
+        if (!button) return; // 确保按钮存在
 
-        if (currentRoomRef) {
+        if (currentRoomId) {
             if (isRoomOwner) {
                 button.innerHTML = '<i class="fas fa-door-closed"></i> <span id="roomButtonText">关闭房间</span>';
+                button.disabled = false;
+                button.style.display = 'inline-block';
             } else {
                 button.style.display = 'none';
             }
         } else {
-            button.innerHTML = '<i class="fas fa-door-open"></i> <span id="roomButtonText">创建房间</span>';
+            // 检查 Firebase 是否已初始化
+            if (typeof window.firebaseDB === 'undefined') {
+                button.innerHTML = '<i class="fas fa-sync fa-spin"></i> <span id="roomButtonText">正在初始化...</span>';
+                button.disabled = true;
+            } else {
+                button.innerHTML = '<i class="fas fa-door-open"></i> <span id="roomButtonText">创建房间</span>';
+                button.disabled = false;
+            }
+            button.style.display = 'inline-block';
+        }
+    }
+
+    // 添加跳转到房间的函数
+    function goToRoom() {
+        if (currentRoomId) {
+            window.location.href = `https://roger-fly.github.io/billiards/?room=${currentRoomId}`;
         }
     }
 
@@ -2052,6 +2254,22 @@
             // 显示创建房间按钮
             createRoomBtn.style.display = 'inline-block';
             updateRoomButton();
+
+            // 检查 Firebase 是否已初始化
+            if (typeof window.firebaseDB === 'undefined') {
+                // 添加加载提示
+                createRoomBtn.innerHTML = '<i class="fas fa-sync fa-spin"></i> <span id="roomButtonText">正在初始化...</span>';
+                createRoomBtn.disabled = true;
+
+                // 等待 Firebase 初始化完成
+                const checkFirebase = setInterval(() => {
+                    if (typeof window.firebaseDB !== 'undefined') {
+                        clearInterval(checkFirebase);
+                        createRoomBtn.disabled = false;
+                        createRoomBtn.innerHTML = '<i class="fas fa-door-open"></i> <span id="roomButtonText">创建房间</span>';
+                    }
+                }, 200);
+            }
         } else {
             // 隐藏创建房间按钮（成员页面）
             createRoomBtn.style.display = 'none';
@@ -2120,8 +2338,8 @@
     setInterval(saveDataToLocalStorage, 5000);
 
 </script>
-<script src="libs/qrcode.min.js"></script>
 
+<script src="libs/qrcode.min.js"></script>
 
 </body>
 </html>
