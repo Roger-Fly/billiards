@@ -1006,6 +1006,9 @@
             log(`${member.name} 加入`);
             speak(`${member.name} 加入房间`);
             renderPeople();
+
+            // 同步到Firebase
+            syncMembersToFirebase();
         }
         saveDataToLocalStorage();
         document.getElementById('inputModal').style.display = 'none';
@@ -1322,6 +1325,14 @@
         logUseDate(startTime, `开台成功`);
         speak("我在小铁很想虐你，就是战别BB！");
         saveDataToLocalStorage();
+
+        // 同步开台状态到Firebase
+        if (currentRoomRef && isRoomOwner) {
+            const {update} = window.firebaseDB;
+            update(currentRoomRef, {
+                'settings/startTime': startTime.toISOString()
+            });
+        }
     }
 
     function endTable() {
@@ -1365,6 +1376,15 @@
         updateCosts();
         saveDataToLocalStorage();
         updateButtonStates();
+
+        // 同步关台状态到Firebase
+        if (currentRoomRef && isRoomOwner) {
+            const {update} = window.firebaseDB;
+            update(currentRoomRef, {
+                'settings/startTime': null
+            });
+        }
+
         setTimeout(() => {
             isEnding = false;
         }, 60000);
@@ -1851,12 +1871,13 @@
         const roomData = {
             createdAt: serverTimestamp(),
             owner: userId,  // 设置当前用户为房主
-            members: [],
+            members: {},
             settings: {
                 hourlyRate: getNumberInput('hourlyRate'),
                 waterFeeRate: getNumberInput('waterFeeRate'),
                 waterFeeTarget: getNumberInput('waterFeeTarget'),
-                isEnded: true
+                isEnded: false,
+                startTime: null
             }
         };
 
@@ -1870,14 +1891,42 @@
 
             // 更新房间状态
             currentRoomId = roomId;
+            currentRoomRef = roomRef;
             isRoomOwner = true;
             updateRoomButton();
+
+            // 开始监听房间数据变化
+            setupRoomListeners();
         }).catch(error => {
             console.error("创建房间失败:", error);
             alert("创建房间失败，请重试");
             // 恢复按钮状态
             createRoomBtn.innerHTML = originalHTML;
             createRoomBtn.disabled = false;
+        });
+    }
+
+    // 设置房间监听器
+    function setupRoomListeners() {
+        if (!currentRoomRef) return;
+
+        const {onValue} = window.firebaseDB;
+
+        // 监听房间数据变化
+        onValue(currentRoomRef, (snapshot) => {
+            const roomData = snapshot.val();
+            if (roomData) {
+                updateLocalData(roomData);
+            }
+        });
+
+        // 监听房间删除事件
+        onValue(currentRoomRef, (snapshot) => {
+            if (!snapshot.exists() && currentRoomId) {
+                alert("房间已被房主关闭");
+                localStorage.removeItem('userId');
+                window.location.href = "https://roger-fly.github.io/billiards/";
+            }
         });
     }
 
@@ -2053,53 +2102,13 @@
 
     // 实际执行加入房间的函数
     function performJoinRoom(roomId) {
-        const {database, ref, onValue, update} = window.firebaseDB;
+        const {database, ref, onValue} = window.firebaseDB;
 
         currentRoomId = roomId;
         currentRoomRef = ref(database, 'rooms/' + roomId);
 
-        // 监听房间数据变化
-        onValue(currentRoomRef, (snapshot) => {
-            const roomData = snapshot.val();
-            if (roomData) {
-                // 更新本地数据
-                updateLocalData(roomData);
-
-                // 检查房主身份
-                if (!roomData.owner) {
-                    // 如果还没有房主，设置当前用户为房主
-                    isRoomOwner = true;
-                    const userId = 'user-' + Date.now();
-                    update(currentRoomRef, {owner: userId});
-                    localStorage.setItem('userId', userId);
-                    updateRoomButton();
-                } else {
-                    // 检查当前用户是否为房主
-                    const storedUserId = localStorage.getItem('userId');
-                    if (storedUserId && roomData.owner === storedUserId) {
-                        isRoomOwner = true;
-                    } else if (!storedUserId && roomData.owner.includes('user-')) {
-                        // 如果本地没有存储userId但房间有房主，假设当前用户是成员
-                        isRoomOwner = false;
-                        // 存储房主ID作为参考
-                        localStorage.setItem('userId', 'member-' + Date.now());
-                    } else {
-                        isRoomOwner = false;
-                    }
-                    updateRoomButton();
-                }
-            }
-        });
-
-        // 监听房间被删除事件
-        onValue(currentRoomRef, (snapshot) => {
-            if (!snapshot.exists() && currentRoomId) {
-                // 房间已被删除
-                alert("房间已被房主关闭");
-                localStorage.removeItem('userId');
-                window.location.href = "https://roger-fly.github.io/billiards/";
-            }
-        });
+        // 设置房间监听器
+        setupRoomListeners();
     }
 
     // 关闭房间函数
@@ -2158,18 +2167,63 @@
     function updateLocalData(roomData) {
         // 更新设置
         const settings = roomData.settings || {};
-        document.getElementById('hourlyRate').value = settings.hourlyRate || 0;
-        document.getElementById('waterFeeRate').value = settings.waterFeeRate || 50;
-        document.getElementById('waterFeeTarget').value = settings.waterFeeTarget || 50;
+        if (settings.hourlyRate !== undefined) {
+            document.getElementById('hourlyRate').value = settings.hourlyRate;
+            hourlyRate = settings.hourlyRate;
+        }
+        if (settings.waterFeeRate !== undefined) {
+            document.getElementById('waterFeeRate').value = settings.waterFeeRate;
+            waterFeeRate = settings.waterFeeRate;
+        }
+        if (settings.waterFeeTarget !== undefined) {
+            document.getElementById('waterFeeTarget').value = settings.waterFeeTarget;
+            waterFeeTarget = settings.waterFeeTarget;
+        }
 
         // 更新成员列表
         if (roomData.members) {
-            members = Object.values(roomData.members);
+            // 将对象转换为数组
+            members = Object.values(roomData.members).map(member => {
+                // 确保时间字段正确转换
+                if (member.joinTime && typeof member.joinTime === 'string') {
+                    member.joinTime = new Date(member.joinTime);
+                }
+                return member;
+            });
+        } else {
+            members = [];
+        }
+
+        // 更新开台状态
+        if (settings.startTime) {
+            startTime = new Date(settings.startTime);
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('btnEnd').disabled = false;
+            disableInputs();
+
+            // 启动计时器
+            if (!timerInterval) {
+                timerInterval = setInterval(updateCosts, 1000);
+            }
+            if (!durationInterval) {
+                durationInterval = setInterval(() => {
+                    if (startTime) {
+                        const elapsed = new Date() - startTime;
+                        document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>${formatDuration(elapsed)}</span>`;
+                    }
+                }, 1000);
+            }
+        } else {
+            startTime = null;
+            document.getElementById('btnStart').disabled = members.length === 0;
+            document.getElementById('btnEnd').disabled = true;
+            enableInputs();
         }
 
         // 重新渲染页面
         renderPeople();
         updateCosts();
+        updateButtonStates();
     }
 
     // 复制房间链接
@@ -2207,11 +2261,12 @@
     });
 
     // 同步数据到Firebase
-    function syncRoomData(roomRef) {
+    function syncRoomData() {
         // 监听设置变化
         document.getElementById('hourlyRate').addEventListener('change', () => {
-            if (currentRoomRef) {
-                currentRoomRef.update({
+            if (currentRoomRef && isRoomOwner) {
+                const {update} = window.firebaseDB;
+                update(currentRoomRef, {
                     'settings/hourlyRate': getNumberInput('hourlyRate')
                 });
             }
@@ -2219,8 +2274,9 @@
 
         // 监听水费设置变化
         document.getElementById('waterFeeRate').addEventListener('change', () => {
-            if (currentRoomRef) {
-                currentRoomRef.update({
+            if (currentRoomRef && isRoomOwner) {
+                const {update} = window.firebaseDB;
+                update(currentRoomRef, {
                     'settings/waterFeeRate': getNumberInput('waterFeeRate')
                 });
             }
@@ -2228,8 +2284,9 @@
 
         // 监听水费目标变化
         document.getElementById('waterFeeTarget').addEventListener('change', () => {
-            if (currentRoomRef) {
-                currentRoomRef.update({
+            if (currentRoomRef && isRoomOwner) {
+                const {update} = window.firebaseDB;
+                update(currentRoomRef, {
                     'settings/waterFeeTarget': getNumberInput('waterFeeTarget')
                 });
             }
@@ -2241,6 +2298,7 @@
         renderPeople();
         updateButtonStates();
         setupInputBlurListeners();
+        syncRoomData(); // 设置房间数据同步监听器
 
         // 检查URL中的room参数
         const urlParams = new URLSearchParams(window.location.search);
@@ -2308,16 +2366,23 @@
 
     // 同步成员数据到Firebase
     function syncMembersToFirebase() {
-        if (currentRoomRef) {
+        if (currentRoomRef && isRoomOwner) {
             const {update} = window.firebaseDB;
             // 将成员数组转换为对象格式以便Firebase存储
             const membersObj = {};
             members.forEach((member, index) => {
-                membersObj[`member_${index}`] = member;
+                // 确保日期对象正确序列化
+                const memberCopy = {...member};
+                if (memberCopy.joinTime instanceof Date) {
+                    memberCopy.joinTime = memberCopy.joinTime.toISOString();
+                }
+                membersObj[`member_${index}`] = memberCopy;
             });
 
             update(currentRoomRef, {
                 members: membersObj
+            }).catch(error => {
+                console.error("同步成员数据失败:", error);
             });
         }
     }
