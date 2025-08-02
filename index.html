@@ -129,6 +129,7 @@
             color: var(--secondary);
             font-size: 15px;
         }
+
         /* 修复输入框与图标重叠问题 */
         .input-group {
             position: relative;
@@ -581,32 +582,32 @@
         @media (max-width: 768px) {
             /* 通用按钮样式调整 */
             button {
-                padding: 10px 12px !important;  /* 从16px 20px减小 */
-                font-size: 14px !important;      /* 从16px减小 */
+                padding: 10px 12px !important; /* 从16px 20px减小 */
+                font-size: 14px !important; /* 从16px减小 */
             }
 
             button i {
-                font-size: 16px !important;     /* 从20px减小 */
+                font-size: 16px !important; /* 从20px减小 */
             }
 
             /* 特定按钮组调整 */
             .button-group {
-                gap: 10px;                      /* 从15px减小 */
-                margin: 15px 0;                 /* 从20px 0减小 */
+                gap: 10px; /* 从15px减小 */
+                margin: 15px 0; /* 从20px 0减小 */
             }
 
             /* 添加成员按钮单独调整 */
             #btnAdd {
                 padding: 10px 12px !important;
                 font-size: 14px !important;
-                margin: 10px auto;              /* 上下间距减小 */
-                width: 180px;                   /* 适当减小宽度 */
+                margin: 10px auto; /* 上下间距减小 */
+                width: 180px; /* 适当减小宽度 */
             }
 
             /* 操作按钮调整 */
             .actions button {
-                padding: 8px !important;        /* 从12px减小 */
-                font-size: 12px !important;     /* 从14px减小 */
+                padding: 8px !important; /* 从12px减小 */
+                font-size: 12px !important; /* 从14px减小 */
             }
         }
 
@@ -679,6 +680,22 @@
             .actions button i {
                 font-size: 12px; /* 减小图标大小 */
             }
+        }
+
+        /* 创建房间按钮样式 */
+        .btn-add {
+            background: linear-gradient(135deg, var(--accent), #2980b9);
+            color: white;
+        }
+
+        /* 二维码模态框样式 */
+        #qrcode {
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .input-group i.fa-link {
+            color: var(--accent);
         }
     </style>
 </head>
@@ -799,6 +816,30 @@
             <button class="btn-reset" id="btnReset" onclick="resetAll()">
                 <i class="fas fa-redo"></i> 重置
             </button>
+
+            <button class="btn-add" id="btnCreateRoom" onclick="toggleRoom()">
+                <i class="fas fa-door-open"></i> <span id="roomButtonText">创建房间</span>
+            </button>
+        </div>
+
+        <!-- 创建房间模态框 -->
+        <div id="createRoomModal" class="modal-overlay" style="display:none;">
+            <div class="modal">
+                <h3><i class="fas fa-qrcode"></i> 房间二维码</h3>
+                <div class="modal-content">
+                    <div id="qrcode" style="margin: 20px auto; width: 200px; height: 200px;"></div>
+                    <div class="input-group" style="margin-top: 20px;">
+                        <i class="fas fa-link"></i>
+                        <input type="text" id="roomLink" readonly style="background: #f0f0f0; cursor: pointer;"
+                               onclick="copyRoomLink()">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button onclick="closeCreateRoomModal()" style="background: var(--accent);">
+                        <i class="fas fa-times"></i> 关闭
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="log-container">
@@ -843,6 +884,50 @@
 <footer>
     <p>© 2025 台球分摊计分系统 | 让每一分都算得清清楚楚</p>
 </footer>
+<!-- 修改模块脚本部分 -->
+<script type="module">
+    import {initializeApp} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import {
+        getDatabase,
+        ref,
+        set,
+        onValue,
+        remove,
+        update,
+        serverTimestamp,
+        push
+    } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+    import {getAnalytics} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDNTCZnRoJiK2GHWuJ3vs67ouHZsTIWGXI",
+        authDomain: "billiards-95e89.firebaseapp.com",
+        databaseURL: "https://billiards-95e89-default-rtdb.firebaseio.com",
+        projectId: "billiards-95e89",
+        storageBucket: "billiards-95e89.firebasestorage.app",
+        messagingSenderId: "559385826687",
+        appId: "1:559385826687:web:2bbb755209f27d0c60364a",
+        measurementId: "G-5TYVQS1VCW"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    const analytics = getAnalytics(app);
+
+    // 将 Firebase 对象暴露给全局作用域
+    window.firebaseDB = {
+        database: database,
+        ref: ref,
+        set: set,
+        onValue: onValue,
+        remove: remove,
+        update: update,
+        serverTimestamp: serverTimestamp,
+        push: push
+    };
+</script>
 
 <script>
     let hourlyRate = 0;
@@ -857,6 +942,10 @@
     let blurListenersSetup = false;
     let saveTimeout;
     let isEnding = false;
+    // Firebase房间相关变量
+    let isRoomOwner = false;
+    let currentRoomId = null;
+    let currentRoomRef = null;
 
     function toggleEndOptions() {
         const mode = document.getElementById("endModeSelect").value;
@@ -889,6 +978,10 @@
         const input = document.getElementById('inputName');
         input.value = '';
         input.focus();
+
+        if (currentRoomRef) {
+            currentRoomRef.child('members').set(members);
+        }
     }
 
     function confirmInput() {
@@ -943,6 +1036,9 @@
             speak(`${member.name} 已退出房间`);
             renderPeople();
             saveDataToLocalStorage();
+
+            // 同步到Firebase
+            syncMembersToFirebase();
         }
     }
 
@@ -955,6 +1051,8 @@
             log(`${member.name} 再次加入房间`);
             speak(`${member.name} 再次加入房间`);
             renderPeople();
+            // 同步到Firebase
+            syncMembersToFirebase();
         }
         saveDataToLocalStorage();
     }
@@ -1065,6 +1163,9 @@
         closeModal();
         renderPeople();
         saveDataToLocalStorage();
+
+        // 同步到Firebase
+        syncMembersToFirebase();
     }
 
     function showHistory(id) {
@@ -1330,9 +1431,9 @@
                             <div class="stat-item">
                                 <div class="stat-label">积分</div>
                                 ${member.point < 0
-                                    ? `<div class="stat-value point point-negative">${member.point.toFixed(2)} 分</div>`
-                                    : `<div class="stat-value point point-positive">${member.point.toFixed(2)} 分</div>`
-                                }
+                ? `<div class="stat-value point point-negative">${member.point.toFixed(2)} 分</div>`
+                : `<div class="stat-value point point-positive">${member.point.toFixed(2)} 分</div>`
+            }
                             </div>
                             <div class="stat-item">
                                 <div class="stat-label">费用</div>
@@ -1342,24 +1443,24 @@
                     </div>
                 </div>
                     ${(() => {
-                    const isStarted = !!startTime;
-                    const isEnded = isTableEnded();
+                const isStarted = !!startTime;
+                const isEnded = isTableEnded();
 
-                    if (isEnded) {
-                        // 已关台：不显示任何按钮
-                        return '';
-                    } else if (!isStarted) {
-                        // 未开台：只显示删除按钮
-                        return `
+                if (isEnded) {
+                    // 已关台：不显示任何按钮
+                    return '';
+                } else if (!isStarted) {
+                    // 未开台：只显示删除按钮
+                    return `
                 <div class="actions">
                     <button class="delete-btn" onclick="deleteMember(${member.id})">
                         <i class="fas fa-trash"></i> 删除
                     </button>
                 </div>
             `;
-                    } else {
-                        // 开台中：保留原有按钮
-                        return `
+                } else {
+                    // 开台中：保留原有按钮
+                    return `
                 <div class="actions">
                     ${member.active ? `<button onclick="leaveMember(${member.id})"><i class="fas fa-sign-out-alt"></i> 退出</button>` : ''}
                     ${!member.active ? `<button onclick="rejoinMember(${member.id})"><i class="fas fa-sign-in-alt"></i> 加入</button>` : ''}
@@ -1368,8 +1469,8 @@
                     ${hasUnReversedOut(member) ? `<button class="undo-btn" onclick="undoLastTransfer(${member.id})"><i class="fas fa-undo"></i> 撤回</button>` : ''}
                 </div>
             `;
-                    }
-                })()}
+                }
+            })()}
             `;
             container.appendChild(div);
         });
@@ -1387,6 +1488,9 @@
             log(`成员被删除`);
             renderPeople();
             saveDataToLocalStorage();
+
+            // 同步到Firebase
+            syncMembersToFirebase();
         }
     }
 
@@ -1502,6 +1606,9 @@
 
         renderPeople();
         saveDataToLocalStorage();
+
+        // 同步到Firebase
+        syncMembersToFirebase();
     }
 
     function hasUnReversedOut(member) {
@@ -1532,6 +1639,23 @@
             isEnded: startTime && isTableEnded()
         };
         localStorage.setItem('tableData', JSON.stringify(data));
+
+        // 如果在房间中，同步数据到Firebase
+        if (currentRoomRef) {
+            const {update} = window.firebaseDB;
+            const hourlyRate = getNumberInput('hourlyRate');
+            const waterFeeRate = getNumberInput('waterFeeRate');
+            const waterFeeTarget = getNumberInput('waterFeeTarget');
+
+            update(currentRoomRef, {
+                'settings/hourlyRate': hourlyRate,
+                'settings/waterFeeRate': waterFeeRate,
+                'settings/waterFeeTarget': waterFeeTarget
+            });
+
+            // 同步成员数据
+            syncMembersToFirebase();
+        }
     }
 
     function loadDataFromLocalStorage() {
@@ -1697,11 +1821,243 @@
         }
     }
 
+    function createRoom() {
+        // 检查 Firebase 是否可用
+        if (typeof window.firebaseDB === 'undefined') {
+            alert('Firebase 正在初始化，请稍后重试');
+            return;
+        }
+
+        const {database, ref, set, push, serverTimestamp} = window.firebaseDB;
+
+        // 生成唯一房间ID（使用 push 函数）
+        const roomRef = push(ref(database, 'rooms'));
+        const roomId = roomRef.key;
+
+        // 创建房间数据
+        const roomData = {
+            createdAt: serverTimestamp(),
+            owner: null,
+            members: [],
+            settings: {
+                hourlyRate: getNumberInput('hourlyRate'),
+                waterFeeRate: getNumberInput('waterFeeRate'),
+                waterFeeTarget: getNumberInput('waterFeeTarget'),
+                isEnded: true
+            }
+        };
+
+        // 保存房间数据
+        set(roomRef, roomData).then(() => {
+            // 生成房间链接
+            const roomLink = `https://roger-fly.github.io/billiards/?room=${roomId}`;
+
+            // 房主创建房间后自动跳转到房间URL
+            window.location.href = roomLink;
+        }).catch(error => {
+            console.error("创建房间失败:", error);
+            alert("创建房间失败，请重试");
+        });
+    }
+
+    // 修改toggleRoom函数，处理创建房间和关闭房间
+    function toggleRoom() {
+        if (!currentRoomRef) {
+            // 创建房间
+            createRoom();
+        } else {
+            // 关闭房间
+            closeRoom();
+        }
+    }
+
+    function joinRoom(roomId) {
+        if (typeof window.firebaseDB === 'undefined') {
+            alert('Firebase 正在初始化，请稍后重试');
+            return;
+        }
+
+        const {database, ref, onValue, update} = window.firebaseDB;
+
+        currentRoomId = roomId;
+        currentRoomRef = ref(database, 'rooms/' + roomId);
+
+        // 监听房间数据变化
+        onValue(currentRoomRef, (snapshot) => {
+            const roomData = snapshot.val();
+            if (roomData) {
+                // 更新本地数据
+                updateLocalData(roomData);
+
+                // 检查房主身份
+                if (roomData.owner === null) {
+                    // 如果还没有房主，设置当前用户为房主
+                    isRoomOwner = true;
+                    update(currentRoomRef, {owner: 'user-' + Date.now()});
+                    updateRoomButton();
+                } else if (roomData.owner === 'user-' + Date.now()) {
+                    // 当前用户是房主
+                    isRoomOwner = true;
+                    updateRoomButton();
+                } else {
+                    // 当前用户是成员
+                    isRoomOwner = false;
+                    updateRoomButton();
+                }
+            }
+        });
+
+        // 监听房间被删除事件
+        onValue(currentRoomRef, (snapshot) => {
+            if (!snapshot.exists()) {
+                // 房间已被删除
+                alert("房间已被房主关闭");
+                window.location.href = "https://roger-fly.github.io/billiards/";
+            }
+        });
+    }
+
+    // 关闭房间函数
+    function closeRoom() {
+        if (confirm("确定要关闭房间吗？所有成员将被断开连接。")) {
+            if (currentRoomRef) {
+                const {remove} = window.firebaseDB;
+                // 删除房间数据
+                remove(currentRoomRef).then(() => {
+                    // 重置房间状态
+                    currentRoomRef = null;
+                    currentRoomId = null;
+                    isRoomOwner = false;
+
+                    // 跳转到基础链接
+                    window.location.href = "https://roger-fly.github.io/billiards/";
+                });
+            }
+        }
+    }
+
+    // 更新房间按钮显示
+    function updateRoomButton() {
+        const button = document.getElementById('btnCreateRoom');
+        const text = document.getElementById('roomButtonText');
+
+        if (currentRoomRef) {
+            if (isRoomOwner) {
+                button.innerHTML = '<i class="fas fa-door-closed"></i> <span id="roomButtonText">关闭房间</span>';
+            } else {
+                button.style.display = 'none';
+            }
+        } else {
+            button.innerHTML = '<i class="fas fa-door-open"></i> <span id="roomButtonText">创建房间</span>';
+        }
+    }
+
+    // 修改updateLocalData函数
+    function updateLocalData(roomData) {
+        // 更新设置
+        const settings = roomData.settings || {};
+        document.getElementById('hourlyRate').value = settings.hourlyRate || 0;
+        document.getElementById('waterFeeRate').value = settings.waterFeeRate || 50;
+        document.getElementById('waterFeeTarget').value = settings.waterFeeTarget || 50;
+
+        // 更新成员列表
+        if (roomData.members) {
+            members = Object.values(roomData.members);
+        }
+
+        // 重新渲染页面
+        renderPeople();
+        updateCosts();
+    }
+
+    // 复制房间链接
+    function copyRoomLink() {
+        const roomLinkInput = document.getElementById('roomLink');
+        roomLinkInput.select();
+        document.execCommand('copy');
+        alert('链接已复制到剪贴板');
+    }
+
+    // 关闭模态框
+    function closeCreateRoomModal() {
+        document.getElementById('createRoomModal').style.display = 'none';
+    }
+
+    // 检查是否为基础链接
+    document.addEventListener("DOMContentLoaded", function () {
+        // ... 其他代码 ...
+
+        // 检查URL中的room参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room');
+
+        // 获取创建房间按钮
+        const createRoomBtn = document.getElementById('btnCreateRoom');
+
+        // 如果是基础链接（没有room参数）
+        if (!roomId) {
+            // 显示创建房间按钮
+            createRoomBtn.style.display = 'inline-block';
+        } else {
+            // 隐藏创建房间按钮
+            createRoomBtn.style.display = 'none';
+        }
+    });
+
+    // 同步数据到Firebase
+    function syncRoomData(roomRef) {
+        // 监听设置变化
+        document.getElementById('hourlyRate').addEventListener('change', () => {
+            if (currentRoomRef) {
+                currentRoomRef.update({
+                    'settings/hourlyRate': getNumberInput('hourlyRate')
+                });
+            }
+        });
+
+        // 监听水费设置变化
+        document.getElementById('waterFeeRate').addEventListener('change', () => {
+            if (currentRoomRef) {
+                currentRoomRef.update({
+                    'settings/waterFeeRate': getNumberInput('waterFeeRate')
+                });
+            }
+        });
+
+        // 监听水费目标变化
+        document.getElementById('waterFeeTarget').addEventListener('change', () => {
+            if (currentRoomRef) {
+                currentRoomRef.update({
+                    'settings/waterFeeTarget': getNumberInput('waterFeeTarget')
+                });
+            }
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         loadDataFromLocalStorage();
         renderPeople();
         updateButtonStates();
         setupInputBlurListeners();
+
+        // 检查URL中的room参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room');
+
+        // 获取创建房间按钮
+        const createRoomBtn = document.getElementById('btnCreateRoom');
+
+        // 如果是基础链接（没有room参数）
+        if (!roomId) {
+            // 显示创建房间按钮
+            createRoomBtn.style.display = 'inline-block';
+            updateRoomButton();
+        } else {
+            // 隐藏创建房间按钮（成员页面）
+            createRoomBtn.style.display = 'none';
+            // 加入房间
+            joinRoom(roomId);
+        }
 
         document.addEventListener("visibilitychange", () => {
             if (!document.hidden && startTime) {
@@ -1730,21 +2086,23 @@
                 document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>00:00:00</span>`;
             }
         }
-
-        // 初始化共享功能
-        setTimeout(() => {
-            initShareConnection();
-            setupShareDataWatchers();
-
-            // 定期同步数据（如果是主机）
-            setInterval(() => {
-                if (isShareHost) {
-                    broadcastShareUpdate();
-                }
-            }, 10000); // 每10秒同步一次
-        }, 1000);
     });
 
+    // 同步成员数据到Firebase
+    function syncMembersToFirebase() {
+        if (currentRoomRef) {
+            const {update} = window.firebaseDB;
+            // 将成员数组转换为对象格式以便Firebase存储
+            const membersObj = {};
+            members.forEach((member, index) => {
+                membersObj[`member_${index}`] = member;
+            });
+
+            update(currentRoomRef, {
+                members: membersObj
+            });
+        }
+    }
 
     document.addEventListener("visibilitychange", () => {
         if (!document.hidden && startTime) {
@@ -1760,647 +2118,10 @@
 
     renderPeople();
     setInterval(saveDataToLocalStorage, 5000);
+
 </script>
-<!-- 在页面底部 </body> 标签前添加以下代码 -->
-<div id="shareSection" style="margin: 30px auto 0; max-width: 600px; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; text-align: center;">
-    <h3 style="color: white; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;">
-        <i class="fas fa-share-alt"></i> 实时数据共享
-    </h3>
-
-    <div id="shareStatus" style="color: #ccc; margin-bottom: 15px; padding: 8px; border-radius: 5px; background: rgba(0,0,0,0.2);">
-        <i class="fas fa-circle-notch fa-spin"></i> 正在初始化连接...
-    </div>
-
-    <div id="shareQRCode" style="margin: 0 auto; width: 180px; height: 180px; background: white; padding: 10px; border-radius: 10px; display: flex; justify-content: center; align-items: center;">
-        <canvas id="qrCanvas" width="160" height="160"></canvas>
-    </div>
-
-    <div style="margin-top: 15px; display: flex; justify-content: center; gap: 10px;">
-        <button onclick="copyShareLink()" style="background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; flex: 1; max-width: 150px; display: flex; align-items: center; justify-content: center; gap: 5px;">
-            <i class="fas fa-copy"></i> 复制邀请链接
-        </button>
-        <button onclick="resetShareConnection()" style="background: var(--danger); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; flex: 1; max-width: 150px; display: flex; align-items: center; justify-content: center; gap: 5px;">
-            <i class="fas fa-sync-alt"></i> 重置连接
-        </button>
-    </div>
-
-    <div id="connectedDevices" style="margin-top: 15px; color: #ddd; font-size: 14px; padding: 8px; border-radius: 5px; background: rgba(0,0,0,0.2);">
-        <i class="fas fa-users"></i> 已连接设备: <span id="deviceCount">0</span>
-    </div>
-</div>
-
-<!-- 使用本地库文件替代 CDN 引用 -->
-<script src="libs/peerjs.min.js"></script>
 <script src="libs/qrcode.min.js"></script>
 
-<script>
-    // ========== 共享功能全局变量 ==========
-    let sharePeer = null;
-    let shareConn = null;
-    let isShareHost = false;
-    let shareData = {};
-    let connectedDeviceCount = 0;
 
-    // ========== 创建Peer实例 ==========
-    function createPeerInstance(peerId) {
-        const peerOptions = {
-            host: '0.peerjs.com',
-            port: 443,
-            secure: true,
-            debug: 2
-        };
-
-        // 如果有peerId，使用该ID创建实例
-        if (peerId) {
-            peerOptions.id = peerId;
-            console.log('创建Peer实例时指定ID:', peerId);
-        }
-
-        const newPeer = new Peer(peerId, peerOptions);
-
-        newPeer.on('error', (err) => {
-            console.error('Peer实例错误:', err);
-            if (err.type === 'unavailable-id') {
-                console.warn('指定的ID不可用，需要重新生成');
-                // 如果指定的ID不可用，清除存储的ID并重新初始化
-                localStorage.removeItem('peerShareData');
-                setTimeout(initShareConnection, 500);
-            }
-        });
-
-        return newPeer;
-    }
-
-    // ========== 初始化共享连接 ==========
-    function initShareConnection() {
-        updateShareStatus("正在初始化连接...", "connecting");
-
-        // 检查 QRCode.js 是否已加载
-        if (typeof QRCode === 'undefined') {
-            console.error('QRCode.js 未加载');
-            updateShareStatus("QRCode.js 未加载", "error");
-            return;
-        }
-
-        // 检查 PeerJS 是否已加载
-        if (typeof Peer === 'undefined') {
-            console.error('PeerJS 未加载');
-            updateShareStatus("PeerJS 未加载", "error");
-            return;
-        }
-
-        // 尝试从URL获取主机ID（客户端情况）
-        const urlParams = new URLSearchParams(window.location.search);
-        const hostId = urlParams.get('share');
-
-        if (hostId) {
-            // 作为客户端连接到主机
-            updateShareStatus("正在连接到主机...", "connecting");
-
-            // 客户端不需要自己的ID，直接创建Peer实例
-            sharePeer = new Peer({
-                host: '0.peerjs.com',
-                port: 443,
-                secure: true,
-                debug: 2
-            });
-
-            sharePeer.on('open', () => {
-                connectToSharePeer(hostId);
-            });
-
-            setupPeerEvents();
-            return;
-        }
-
-        // 作为主机创建连接
-        isShareHost = true;
-
-        // 检查本地存储中是否已有Peer ID
-        let storedPeerData = localStorage.getItem('peerShareData');
-        let storedPeerId = null;
-
-        if (storedPeerData) {
-            try {
-                const peerData = JSON.parse(storedPeerData);
-                storedPeerId = peerData.peerId;
-                console.log('使用存储的Peer ID:', storedPeerId);
-            } catch (e) {
-                console.error('解析存储的Peer数据失败:', e);
-            }
-        }
-
-        // 创建Peer实例时使用存储的ID
-        const peerOptions = {
-            host: '0.peerjs.com',
-            port: 443,
-            secure: true,
-            debug: 2
-        };
-
-        // 如果有存储的ID，使用该ID创建Peer实例
-        if (storedPeerId) {
-            peerOptions.id = storedPeerId;
-            console.log('使用存储的ID创建Peer实例');
-        }
-
-        sharePeer = new Peer(storedPeerId, peerOptions);
-
-        sharePeer.on('open', (id) => {
-            console.log('Peer连接已打开，ID:', id);
-
-            // 如果是新生成的ID或者之前没有存储过，保存到localStorage
-            if (!storedPeerId || id !== storedPeerId) {
-                localStorage.setItem('peerShareData', JSON.stringify({
-                    peerId: id,
-                    createdAt: new Date().toISOString()
-                }));
-                console.log('新Peer ID已保存到localStorage');
-            } else {
-                console.log('继续使用现有Peer ID');
-            }
-
-            updateShareStatus(`主机已就绪 (ID: ${id})`, "connected");
-            generateShareQRCode(id);
-            setupShareData();
-        });
-
-        setupPeerEvents();
-    }
-
-    // ========== 设置Peer事件 ==========
-    function setupPeerEvents() {
-        sharePeer.on('connection', (conn) => {
-            console.log('收到连接请求');
-            setupShareConnection(conn);
-        });
-
-        sharePeer.on('error', (err) => {
-            console.error('共享连接错误:', err);
-            updateShareStatus(`错误: ${err.type}`, "error");
-
-            // 特别处理 peer-unavailable 错误
-            if (err.type === 'peer-unavailable') {
-                updateShareStatus("错误: 无法连接到主机，请确认主机是否在线", "error");
-            }
-        });
-
-        sharePeer.on('disconnected', () => {
-            updateShareStatus("连接断开，正在重新连接...", "disconnected");
-            // 延迟重新连接
-            setTimeout(() => {
-                if (sharePeer) {
-                    sharePeer.reconnect();
-                }
-            }, 1000);
-        });
-    }
-
-    // ========== 连接到共享主机 ==========
-    function connectToSharePeer(hostId) {
-        if (!sharePeer) {
-            updateShareStatus("Peer实例未初始化", "error");
-            return;
-        }
-
-        updateShareStatus(`正在连接到主机 ${hostId}...`, "connecting");
-
-        shareConn = sharePeer.connect(hostId, {
-            reliable: true,
-            serialization: 'json',
-            metadata: { browser: navigator.userAgent }
-        });
-
-        shareConn.on('open', () => {
-            updateShareStatus("已连接到主机", "connected");
-            updateConnectedDevices(1);
-
-            // 请求初始数据
-            shareConn.send({ type: 'requestData' });
-        });
-
-        shareConn.on('error', (err) => {
-            console.error('连接错误:', err);
-            updateShareStatus(`连接错误: ${err.message}`, "error");
-
-            if (err.type === 'peer-unavailable') {
-                updateShareStatus("无法找到主机，请确认主机是否在线", "error");
-            }
-        });
-
-        setupShareConnection(shareConn);
-    }
-
-    // ========== 设置共享连接 ==========
-    function setupShareConnection(conn) {
-        if (!conn) {
-            console.error('连接对象为空');
-            return;
-        }
-
-        conn.on('data', (data) => {
-            handleShareData(data);
-        });
-
-        conn.on('close', () => {
-            updateShareStatus("连接已关闭", "disconnected");
-            updateConnectedDevices(0);
-
-            // 如果是主机，清理连接
-            if (isShareHost && shareConn === conn) {
-                shareConn = null;
-            }
-        });
-
-        conn.on('error', (err) => {
-            console.error('连接错误:', err);
-            updateShareStatus(`连接错误: ${err.message}`, "error");
-        });
-    }
-
-    // ========== 生成分享二维码 ==========
-    function generateShareQRCode(peerId) {
-        console.log('开始生成二维码，Peer ID:', peerId);
-        const url = `${window.location.origin}${window.location.pathname}?share=${peerId}`;
-        console.log('二维码链接:', url);
-        const qrContainer = document.getElementById('shareQRCode');
-
-        // 确保容器元素存在
-        if (!qrContainer) {
-            console.error('找不到二维码容器元素');
-            updateShareStatus("页面元素错误", "error");
-            return;
-        }
-
-        // 创建新的canvas元素
-        qrContainer.innerHTML = '<canvas id="qrCanvas" width="160" height="160"></canvas>';
-        const qrCanvas = document.getElementById('qrCanvas');
-
-        console.log('创建 qrCanvas 元素:', qrCanvas);
-
-        try {
-            // 检查 QRCode 库的可用性
-            if (typeof QRCode === 'undefined') {
-                console.error('QRCode.js 库未加载');
-                updateShareStatus("QRCode.js 未加载", "error");
-                showTextLink(url, qrContainer);
-                return;
-            }
-
-            console.log('QRCode 对象结构:', typeof QRCode);
-
-            // 使用简单的配置生成二维码
-            const options = {
-                width: 160,
-                height: 160,
-                margin: 2,
-                color: {
-                    dark: "#2c3e50",
-                    light: "#ffffff"
-                }
-            };
-
-            // 使用 Promise 方式生成二维码
-            if (QRCode.toCanvas && typeof QRCode.toCanvas === 'function') {
-                console.log('使用 QRCode.toCanvas Promise 方式');
-                QRCode.toCanvas(qrCanvas, url, options)
-                    .then(() => {
-                        console.log('二维码生成成功');
-                        updateShareStatus(`主机已就绪 (ID: ${peerId})`, "connected");
-                    })
-                    .catch((err) => {
-                        console.error('生成二维码失败:', err);
-                        updateShareStatus("生成二维码失败: " + err.message, "error");
-                        showTextLink(url, qrContainer);
-                    });
-            } else {
-                // 使用回调方式
-                console.log('使用 QRCode.toCanvas 回调方式');
-                QRCode.toCanvas(qrCanvas, url, options, (error) => {
-                    if (error) {
-                        console.error('生成二维码失败:', error);
-                        updateShareStatus("生成二维码失败: " + error.message, "error");
-                        showTextLink(url, qrContainer);
-                    } else {
-                        console.log('二维码生成成功');
-                        updateShareStatus(`主机已就绪 (ID: ${peerId})`, "connected");
-                    }
-                });
-            }
-        } catch (e) {
-            console.error('生成二维码时发生异常:', e);
-            updateShareStatus("生成二维码异常: " + e.message, "error");
-            showTextLink(url, qrContainer);
-        }
-    }
-
-    // ========== 显示文本链接 ==========
-    function showTextLink(url, container) {
-        if (container) {
-            container.innerHTML = `
-                <div style="text-align: center; padding: 15px; color: #333; background: white; border-radius: 10px;">
-                    <p style="margin: 0 0 10px 0; font-weight: bold;">二维码生成失败</p>
-                    <p style="margin: 0 0 15px 0; font-size: 12px;">请复制下方链接发送给其他人</p>
-                    <textarea
-                        readonly
-                        style="width: 100%; height: 60px; font-size: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 5px; resize: none;"
-                        onclick="this.select()"
-                    >${url}</textarea>
-                    <button
-                        onclick="copyTextLink('${url}')"
-                        style="margin-top: 10px; background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
-                        复制链接
-                    </button>
-                </div>
-            `;
-        }
-    }
-
-    // ========== 复制文本链接 ==========
-    function copyTextLink(url) {
-        const textArea = document.createElement('textarea');
-        textArea.value = url;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        alert('链接已复制到剪贴板！');
-    }
-
-    // ========== 复制分享链接 ==========
-    function copyShareLink() {
-        if (!sharePeer || !sharePeer.id) {
-            alert("请等待连接初始化完成");
-            return;
-        }
-
-        const url = `${window.location.origin}${window.location.pathname}?share=${sharePeer.id}`;
-        navigator.clipboard.writeText(url).then(() => {
-            alert('邀请链接已复制到剪贴板！\n\n' + url);
-        }).catch(err => {
-            console.error('复制失败:', err);
-            alert('复制失败，请手动复制URL');
-        });
-    }
-
-    // ========== 重置共享连接 ==========
-    function resetShareConnection() {
-        if (confirm("确定要重置共享连接吗？当前连接将断开，房间ID将重新生成")) {
-            // 清除保存的Peer ID
-            localStorage.removeItem('peerShareData');
-            console.log('已清除保存的Peer ID');
-
-            if (sharePeer) {
-                sharePeer.destroy();
-                sharePeer = null;
-            }
-            shareConn = null;
-            isShareHost = false;
-            connectedDeviceCount = 0;
-
-            updateShareStatus("正在重新初始化...", "connecting");
-            updateConnectedDevices(0);
-
-            // 清除二维码显示内容
-            const qrContainer = document.getElementById('shareQRCode');
-            if (qrContainer) {
-                qrContainer.innerHTML = '<div style="color: #666; font-size: 14px;">正在重新生成二维码...</div>';
-            }
-
-            // 重新初始化
-            setTimeout(initShareConnection, 500);
-        }
-    }
-
-    // ========== 更新共享状态显示 ==========
-    function updateShareStatus(message, status) {
-        const statusEl = document.getElementById('shareStatus');
-        statusEl.innerHTML = `<i class="fas ${getStatusIcon(status)}"></i> ${message}`;
-
-        // 更新颜色
-        const colors = {
-            connecting: '#f39c12',  // 橙色
-            connected: '#2ecc71',   // 绿色
-            error: '#e74c3c',       // 红色
-            disconnected: '#95a5a6' // 灰色
-        };
-        statusEl.style.color = colors[status] || '#ccc';
-    }
-
-    function getStatusIcon(status) {
-        const icons = {
-            connecting: 'fa-circle-notch fa-spin',
-            connected: 'fa-check-circle',
-            error: 'fa-exclamation-circle',
-            disconnected: 'fa-plug'
-        };
-        return icons[status] || 'fa-info-circle';
-    }
-
-    // ========== 更新已连接设备数 ==========
-    function updateConnectedDevices(count) {
-        connectedDeviceCount = count;
-        document.getElementById('deviceCount').textContent = count;
-    }
-
-    // ========== 准备要共享的数据 ==========
-    function setupShareData() {
-        // 准备成员数据（简化格式）
-        const sharedMembers = members.map(member => ({
-            id: member.id,
-            name: member.name,
-            point: member.point,
-            active: member.active,
-            finalBalance: member.finalBalance
-        }));
-
-        shareData = {
-            hourlyRate: document.getElementById('hourlyRate').value,
-            endMode: document.getElementById('endModeSelect').value,
-            endTime: document.getElementById('endTimeInput').value,
-            duration: document.getElementById('durationInput').value,
-            waterFeeRate: document.getElementById('waterFeeRate').value,
-            waterFeeTarget: document.getElementById('waterFeeTarget').value,
-            members: sharedMembers,
-            startTime: startTime ? startTime.toISOString() : null,
-            collectedWaterFee: collectedWaterFee,
-            isEnded: isTableEnded(),
-            timestamp: new Date().getTime()
-        };
-    }
-
-    // ========== 处理接收到的共享数据 ==========
-    function handleShareData(data) {
-        if (!data || !data.type) {
-            console.warn('收到无效数据:', data);
-            return;
-        }
-
-        if (data.type === 'update') {
-            try {
-                // 更新基础设置
-                if (data.data.hasOwnProperty('hourlyRate')) {
-                    document.getElementById('hourlyRate').value = data.data.hourlyRate || 0;
-                }
-                if (data.data.hasOwnProperty('endMode')) {
-                    document.getElementById('endModeSelect').value = data.data.endMode || 'manual';
-                    toggleEndOptions(); // 确保选项显示正确
-                }
-                if (data.data.hasOwnProperty('endTime')) {
-                    document.getElementById('endTimeInput').value = data.data.endTime || '';
-                }
-                if (data.data.hasOwnProperty('duration')) {
-                    document.getElementById('durationInput').value = data.data.duration || '';
-                }
-                if (data.data.hasOwnProperty('waterFeeRate')) {
-                    document.getElementById('waterFeeRate').value = data.data.waterFeeRate || 10;
-                }
-                if (data.data.hasOwnProperty('waterFeeTarget')) {
-                    document.getElementById('waterFeeTarget').value = data.data.waterFeeTarget || 50;
-                }
-
-                // 更新成员数据
-                if (Array.isArray(data.data.members)) {
-                    members = data.data.members.map(member => {
-                        const existing = members.find(m => m.id === member.id) || {};
-                        return {
-                            ...existing,
-                            ...member,
-                            joinTime: member.joinTime ? new Date(member.joinTime) : null
-                        };
-                    });
-                }
-
-                // 更新状态
-                if (data.data.hasOwnProperty('startTime')) {
-                    startTime = data.data.startTime ? new Date(data.data.startTime) : null;
-                }
-                if (data.data.hasOwnProperty('collectedWaterFee')) {
-                    collectedWaterFee = data.data.collectedWaterFee || 0;
-                }
-
-                // 更新UI
-                renderPeople();
-                updateCosts();
-
-                // 更新关台状态
-                if (data.data.hasOwnProperty('isEnded') && data.data.isEnded) {
-                    document.getElementById('btnStart').disabled = true;
-                    document.getElementById('btnEnd').disabled = true;
-                    disableInputs();
-                }
-
-                log(`[数据同步] ${new Date().toLocaleTimeString()}`);
-
-            } catch (err) {
-                console.error('处理共享数据出错:', err);
-                log(`[错误] 数据同步失败: ${err.message}`);
-            }
-
-        } else if (data.type === 'requestData' && isShareHost) {
-            // 主机响应数据请求
-            setupShareData();
-            if (shareConn && shareConn.open) {
-                shareConn.send({
-                    type: 'update',
-                    data: shareData
-                });
-                console.log('已发送初始数据给客户端');
-            } else {
-                console.warn('无法发送初始数据：连接未建立或已关闭');
-            }
-        } else {
-            console.warn('未知数据类型:', data.type);
-        }
-    }
-
-    // ========== 广播数据变更 ==========
-    function broadcastShareUpdate() {
-        if (isShareHost && shareConn && shareConn.open) {
-            setupShareData();
-            shareConn.send({
-                type: 'update',
-                data: shareData
-            });
-            console.log('数据已广播');
-        } else if (isShareHost && !shareConn) {
-            console.log('无客户端连接，无需广播数据');
-        } else if (isShareHost && shareConn && !shareConn.open) {
-            console.log('连接已关闭，无法广播数据');
-        }
-    }
-
-    // ========== 设置数据变更监听 ==========
-    function setupShareDataWatchers() {
-        // 监听所有输入框变化
-        const inputIds = [
-            'hourlyRate', 'endModeSelect', 'endTimeInput', 'durationInput',
-            'waterFeeRate', 'waterFeeTarget'
-        ];
-
-        inputIds.forEach(id => {
-            document.getElementById(id).addEventListener('change', () => {
-                if (isShareHost) {
-                    broadcastShareUpdate();
-                }
-            });
-        });
-
-        // 重写关键函数以包含广播
-        const originalFunctions = {
-            addPerson: addPerson,
-            deleteMember: deleteMember,
-            startTable: startTable,
-            endTable: endTable,
-            submitGiveScore: submitGiveScore,
-            undoLastTransfer: undoLastTransfer,
-            resetAll: resetAll
-        };
-
-        // 重写函数
-        addPerson = function() {
-            const result = originalFunctions.addPerson.apply(this, arguments);
-            if (isShareHost) broadcastShareUpdate();
-            return result;
-        };
-
-        deleteMember = function() {
-            const result = originalFunctions.deleteMember.apply(this, arguments);
-            if (isShareHost) broadcastShareUpdate();
-            return result;
-        };
-
-        startTable = function() {
-            const result = originalFunctions.startTable.apply(this, arguments);
-            if (isShareHost) broadcastShareUpdate();
-            return result;
-        };
-
-        endTable = function() {
-            const result = originalFunctions.endTable.apply(this, arguments);
-            if (isShareHost) broadcastShareUpdate();
-            return result;
-        };
-
-        submitGiveScore = function() {
-            const result = originalFunctions.submitGiveScore.apply(this, arguments);
-            if (isShareHost) broadcastShareUpdate();
-            return result;
-        };
-
-        undoLastTransfer = function() {
-            const result = originalFunctions.undoLastTransfer.apply(this, arguments);
-            if (isShareHost) broadcastShareUpdate();
-            return result;
-        };
-
-        resetAll = function() {
-            const result = originalFunctions.resetAll.apply(this, arguments);
-            if (isShareHost) broadcastShareUpdate();
-            return result;
-        };
-    }
-
-</script>
 </body>
 </html>
