@@ -1378,7 +1378,8 @@
         if (currentRoomRef) {
             const {update} = window.firebaseDB;
             update(currentRoomRef, {
-                'settings/startTime': null
+                'settings/startTime': null,
+                'settings/isEnded': true
             });
         }
 
@@ -2012,6 +2013,13 @@
                 }
             }
 
+            // 检查是否结束状态有变化
+            const wasEnded = isTableEnded();
+            const isEnded = settings.isEnded === true;
+            if (wasEnded !== isEnded) {
+                needToUpdateUI = true;
+            }
+
             // 更新开台状态
             if (settings.startTime) {
                 const newStartTime = new Date(settings.startTime);
@@ -2034,6 +2042,12 @@
                         }, 1000);
                     }
                     needToUpdateUI = true;
+
+                    // 记录开台日志（仅当本地未开台时）
+                    if (!wasEnded && !startTime) {
+                        logUseDate(startTime, `开台成功`);
+                        speak("我在小铁很想虐你，就是战别BB！");
+                    }
                 }
             } else {
                 if (startTime) {
@@ -2042,6 +2056,13 @@
                     document.getElementById('btnEnd').disabled = true;
                     enableInputs();
                     needToUpdateUI = true;
+
+                    // 如果是从开台状态变为关台状态
+                    if (!isEnded) {
+                        const now = new Date();
+                        logUseDate(now, `关台成功`);
+                        speak("关台成功");
+                    }
                 }
             }
 
@@ -2068,13 +2089,6 @@
 
             if (settings.duration !== undefined) {
                 document.getElementById("durationInput").value = settings.duration || "";
-            }
-
-            // 检查是否结束状态有变化
-            const wasEnded = isTableEnded();
-            const isEnded = settings.isEnded === true;
-            if (wasEnded !== isEnded) {
-                needToUpdateUI = true;
             }
 
             // 重新渲染页面
