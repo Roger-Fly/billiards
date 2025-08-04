@@ -1998,15 +1998,17 @@
         });
     }
 
+    // 修复房间数据同步问题
+    // 修复房间内开台和关台逻辑，确保与原始链接一致
     function updateLocalDataFromRoom(roomData) {
-        // 确保 roomData 存在
         if (!roomData) return;
 
         try {
-            // 更新设置
             const settings = roomData.settings || {};
             let needToUpdateUI = false;
+            let needToSaveLocal = false;
 
+            // 更新基础设置
             if (settings.hourlyRate !== undefined && settings.hourlyRate !== hourlyRate) {
                 document.getElementById('hourlyRate').value = settings.hourlyRate;
                 hourlyRate = settings.hourlyRate;
@@ -2025,7 +2027,7 @@
                 needToUpdateUI = true;
             }
 
-            // 更新水费收集金额
+            // 更新水费
             if (roomData.collectedWaterFee !== undefined && roomData.collectedWaterFee !== collectedWaterFee) {
                 collectedWaterFee = roomData.collectedWaterFee;
                 needToUpdateUI = true;
@@ -2037,53 +2039,53 @@
                 needToUpdateUI = true;
             }
 
-            // 检查是否结束状态有变化
+            const wasStarted = !!startTime;
             const wasEnded = isTableEnded();
             const isEnded = settings.isEnded === true;
-            if (wasEnded !== isEnded) {
-                needToUpdateUI = true;
-            }
 
-            // 处理开台状态变化 - 修复开台逻辑
+            // 处理开台逻辑 - 严格按照原始链接逻辑
             if (settings.startTime) {
                 const newStartTime = new Date(settings.startTime);
-                // 如果之前没有开台或者开台时间不同
-                if (!startTime || (startTime && startTime.getTime() !== newStartTime.getTime())) {
+                // 只有在之前未开台时才处理开台逻辑
+                if (!wasStarted) {
                     startTime = newStartTime;
-                    needToUpdateUI = true;
-                    scheduledEndTime = settings.scheduledEndTime ? new Date(settings.scheduledEndTime) : null;
 
-                    // 更新UI状态
-                    document.getElementById('btnStart').disabled = true;
-                    document.getElementById('btnEnd').disabled = false;
-                    disableInputs();
-
-                    // 设置关台方式
-                    if (settings.endMode) {
+                    // 设置关台相关参数
+                    if (settings.endMode !== undefined) {
                         document.getElementById("endModeSelect").value = settings.endMode;
                         toggleEndOptions();
-                        if (settings.endTime) {
-                            document.getElementById("endTimeInput").value = settings.endTime;
-                        }
-                        if (settings.duration) {
-                            document.getElementById("durationInput").value = settings.duration;
-                        }
                     }
+                    if (settings.endTime !== undefined) {
+                        document.getElementById("endTimeInput").value = settings.endTime || "";
+                    }
+                    if (settings.duration !== undefined) {
+                        document.getElementById("durationInput").value = settings.duration || "";
+                    }
+                    scheduledEndTime = settings.scheduledEndTime ? new Date(settings.scheduledEndTime) : null;
 
-                    // 启动计时器
-                    if (!timerInterval) {
-                        timerInterval = setInterval(updateCosts, 1000);
-                    }
-                    if (!durationInterval) {
-                        durationInterval = setInterval(() => {
-                            if (startTime) {
-                                const elapsed = new Date() - startTime;
-                                document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>${formatDuration(elapsed)}</span>`;
-                            }
-                        }, 1000);
-                    }
+                    // 更新UI状态 - 与原始链接一致
+                    document.getElementById('btnStart').disabled = true;
+                    document.getElementById('btnEnd').disabled = false;
+                    document.getElementById('hourlyRate').disabled = true;
+                    document.getElementById('endModeSelect').disabled = true;
+                    document.getElementById('endTimeInput').disabled = true;
+                    document.getElementById('durationInput').disabled = true;
 
-                    // 更新所有成员状态为在线并设置加入时间
+                    // 更新显示时间
+                    document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>00:00:00</span>`;
+
+                    // 启动计时器 - 与原始链接一致
+                    if (durationInterval) clearInterval(durationInterval);
+                    durationInterval = setInterval(() => {
+                        if (!startTime) return;
+                        const elapsed = new Date() - startTime;
+                        document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>${formatDuration(elapsed)}</span>`;
+                    }, 1000);
+
+                    if (timerInterval) clearInterval(timerInterval);
+                    timerInterval = setInterval(updateCosts, 1000);
+
+                    // 设置所有成员为在线状态 - 与原始链接一致
                     members.forEach(member => {
                         if (!member.active) {
                             member.joinTime = new Date();
@@ -2091,78 +2093,99 @@
                         }
                     });
 
-                    // 记录开台日志
+                    // 记录开台日志 - 与原始链接一致
                     logUseDate(startTime, `开台成功`);
-                    speak("我在小铁很想虐你，就是战别BB！");
-                }
-            } else {
-                // 处理关台状态变化
-                if (startTime) {
-                    const now = new Date();
-                    startTime = null;
+                    // 不要在这里触发语音，避免重复触发
+
                     needToUpdateUI = true;
-
-                    // 更新UI状态
-                    document.getElementById('btnStart').disabled = !Array.isArray(members) || (members || []).length === 0;
-                    document.getElementById('btnEnd').disabled = true;
-                    enableInputs();
-
-                    // 停止计时器
-                    if (timerInterval) {
-                        clearInterval(timerInterval);
-                        timerInterval = null;
-                    }
-                    if (durationInterval) {
-                        clearInterval(durationInterval);
-                        durationInterval = null;
-                    }
-
-                    // 如果是关台状态，更新所有成员状态
-                    if (isEnded) {
-                        members.forEach(member => {
-                            if (member.active) {
-                                member.totalTime += now - member.joinTime;
-                                member.joinTime = null;
-                                member.active = false;
-                                member.finalBalance = calculateMemberCost(member);
-                            }
-                        });
-
-                        // 保存关台数据到本地存储
-                        localStorage.setItem('endTime', now.toISOString());
-                        const totalTableCost = calculateTotalTableCost();
-                        localStorage.setItem('lastTotalCost', totalTableCost);
-                        localStorage.setItem('lastWaterFee', collectedWaterFee);
-                        const totalDuration = now - startTime;
-                        localStorage.setItem('lastTotalDuration', totalDuration.toString());
-                    }
-
-                    // 记录关台日志
-                    logUseDate(now, `关台成功，总费用：${calculateTotalTableCost().toFixed(2)} 元\n`);
-                    speak(`关台成功，总费用：${calculateTotalTableCost().toFixed(2)} 元\n已记录每位参与者费用`);
-                    alert(`总费用：${calculateTotalTableCost().toFixed(2)} 元\n已记录每位参与者费用`);
+                    needToSaveLocal = true;
+                }
+                // 如果已经开台，只更新计时显示
+                else if (startTime.getTime() !== newStartTime.getTime()) {
+                    startTime = newStartTime;
+                    needToUpdateUI = true;
+                    needToSaveLocal = true;
                 }
             }
 
-            // 更新成员列表（在处理完开台/关台逻辑之后）
+            // 处理关台逻辑 - 严格按照原始链接逻辑
+            else if (wasStarted) {
+                // 停止计时器 - 与原始链接一致
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+                if (durationInterval) {
+                    clearInterval(durationInterval);
+                    durationInterval = null;
+                }
+
+                const now = new Date();
+
+                // 更新成员状态 - 与原始链接一致
+                members.forEach(member => {
+                    if (member.active) {
+                        member.totalTime += now - member.joinTime;
+                        member.joinTime = null;
+                        member.active = false;
+                    }
+                });
+
+                // 如果是正常关台
+                if (isEnded) {
+                    // 计算每个成员的最终费用 - 与原始链接一致
+                    members.forEach(member => {
+                        member.finalBalance = calculateMemberCost(member);
+                    });
+
+                    // 保存关台数据到本地存储 - 与原始链接一致
+                    localStorage.setItem('endTime', now.toISOString());
+                    const totalTableCost = calculateTotalTableCost();
+                    localStorage.setItem('lastTotalCost', totalTableCost);
+                    localStorage.setItem('lastWaterFee', collectedWaterFee);
+                    const totalDuration = now - startTime; // 注意这里应该用原来的startTime
+                    localStorage.setItem('lastTotalDuration', totalDuration.toString());
+
+                    // 记录关台日志 - 与原始链接一致
+                    logUseDate(now, `关台成功，总费用：${totalTableCost.toFixed(2)} 元\n`);
+                    // 不触发alert和语音，避免重复触发
+                }
+
+                // 更新UI状态 - 与原始链接一致
+                startTime = null;
+                document.getElementById('btnStart').disabled = members.length === 0;
+                document.getElementById('btnEnd').disabled = true;
+                document.getElementById('hourlyRate').disabled = false;
+                document.getElementById('endModeSelect').disabled = false;
+                document.getElementById('endTimeInput').disabled = false;
+                document.getElementById('durationInput').disabled = false;
+
+                needToUpdateUI = true;
+                needToSaveLocal = true;
+            }
+
+            // 更新成员数据
             if (roomData.members) {
                 const newMembers = parseMembersFromFirebase(roomData.members);
-
-                // 检查成员数据是否有实质性变化
-                const membersChanged = JSON.stringify(members || []) !== JSON.stringify(newMembers || []);
+                const membersChanged = JSON.stringify(members) !== JSON.stringify(newMembers);
                 if (membersChanged) {
-                    members = newMembers || [];
+                    members = newMembers;
                     needToUpdateUI = true;
+                    needToSaveLocal = true;
                 }
             }
 
-            // 重新渲染页面
+            // 更新UI和保存数据
             if (needToUpdateUI) {
                 updateCosts();
                 updateButtonStates();
                 renderPeople();
-                saveDataToLocalStorage(); // 确保数据缓存到本地
             }
+
+            if (needToSaveLocal) {
+                saveDataToLocalStorage();
+            }
+
         } catch (e) {
             console.error("更新本地数据时出错:", e);
         }
