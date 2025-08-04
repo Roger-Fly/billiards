@@ -2044,18 +2044,31 @@
                 needToUpdateUI = true;
             }
 
-            // 处理开台状态变化
+            // 处理开台状态变化 - 修复开台逻辑
             if (settings.startTime) {
                 const newStartTime = new Date(settings.startTime);
                 // 如果之前没有开台或者开台时间不同
                 if (!startTime || (startTime && startTime.getTime() !== newStartTime.getTime())) {
                     startTime = newStartTime;
                     needToUpdateUI = true;
+                    scheduledEndTime = settings.scheduledEndTime ? new Date(settings.scheduledEndTime) : null;
 
                     // 更新UI状态
                     document.getElementById('btnStart').disabled = true;
                     document.getElementById('btnEnd').disabled = false;
                     disableInputs();
+
+                    // 设置关台方式
+                    if (settings.endMode) {
+                        document.getElementById("endModeSelect").value = settings.endMode;
+                        toggleEndOptions();
+                        if (settings.endTime) {
+                            document.getElementById("endTimeInput").value = settings.endTime;
+                        }
+                        if (settings.duration) {
+                            document.getElementById("durationInput").value = settings.duration;
+                        }
+                    }
 
                     // 启动计时器
                     if (!timerInterval) {
@@ -2114,37 +2127,21 @@
                                 member.finalBalance = calculateMemberCost(member);
                             }
                         });
+
+                        // 保存关台数据到本地存储
+                        localStorage.setItem('endTime', now.toISOString());
+                        const totalTableCost = calculateTotalTableCost();
+                        localStorage.setItem('lastTotalCost', totalTableCost);
+                        localStorage.setItem('lastWaterFee', collectedWaterFee);
+                        const totalDuration = now - startTime;
+                        localStorage.setItem('lastTotalDuration', totalDuration.toString());
                     }
 
                     // 记录关台日志
-                    logUseDate(now, `关台成功`);
-                    speak("关台成功");
+                    logUseDate(now, `关台成功，总费用：${calculateTotalTableCost().toFixed(2)} 元\n`);
+                    speak(`关台成功，总费用：${calculateTotalTableCost().toFixed(2)} 元\n已记录每位参与者费用`);
+                    alert(`总费用：${calculateTotalTableCost().toFixed(2)} 元\n已记录每位参与者费用`);
                 }
-            }
-
-            // 更新关台相关设置
-            if (settings.scheduledEndTime !== undefined) {
-                if (settings.scheduledEndTime) {
-                    scheduledEndTime = new Date(settings.scheduledEndTime);
-                } else {
-                    scheduledEndTime = null;
-                }
-            }
-
-            if (settings.endMode !== undefined) {
-                const select = document.getElementById("endModeSelect");
-                if (select.value !== settings.endMode) {
-                    select.value = settings.endMode;
-                    toggleEndOptions();
-                }
-            }
-
-            if (settings.endTime !== undefined) {
-                document.getElementById("endTimeInput").value = settings.endTime || "";
-            }
-
-            if (settings.duration !== undefined) {
-                document.getElementById("durationInput").value = settings.duration || "";
             }
 
             // 更新成员列表（在处理完开台/关台逻辑之后）
@@ -2164,10 +2161,8 @@
                 updateCosts();
                 updateButtonStates();
                 renderPeople();
+                saveDataToLocalStorage(); // 确保数据缓存到本地
             }
-
-            // 保存到本地存储
-            saveDataToLocalStorage();
         } catch (e) {
             console.error("更新本地数据时出错:", e);
         }
