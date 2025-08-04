@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="8fb29aa8-ee8e-4299-8959-9d3772cf4136" name="Changes" comment="1、数据共享测试">
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/runConfigurations.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_7_5_15_54_[Changes]/shelved.patch" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025_7_5_15_54__Changes_.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ds" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libs/peerjs.min.js" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="hotfix" />
+        <entry key="$PROJECT_DIR$/ds" value="xiaochengxu" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="ROOT_SYNC" value="DONT_SYNC" />
+  </component>
+  <component name="GitSEFilterConfiguration">
+    <file-type-list>
+      <filtered-out-file-type name="LOCAL_BRANCH" />
+      <filtered-out-file-type name="REMOTE_BRANCH" />
+      <filtered-out-file-type name="TAG" />
+      <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
+    </file-type-list>
+  </component>
+  <component name="ProjectId" id="2zIUYMDbr3WgE3jmhREpLa1L5vT" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="js.last.introduce.type" value="CONST" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../triascloud-kcloud" />
+    <property name="nodejs_package_manager_path" value="npm" />
+    <property name="settings.editor.selected.configurable" value="MTHome" />
+  </component>
+  <component name="RebelAgentSelection">
+    <selection>jr</selection>
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\IdeaProject\billiards" />
+      <recent name="E:\IdeaProject\billiards\ds" />
+      <recent name="E:\IdeaProject\billiards\ds\member-card" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="E:\IdeaProject\billiards\ds\pages\billiards" />
+      <recent name="E:\IdeaProject\billiards\ds\components" />
+      <recent name="E:\IdeaProject\billiards\pages.index" />
+      <recent name="E:\IdeaProject\billiards\utils" />
+    </key>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="8fb29aa8-ee8e-4299-8959-9d3772cf4136" name="Changes" comment="" />
+      <created>1751418128336</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1751418128336</updated>
+      <workItem from="1751418129816" duration="24620000" />
+      <workItem from="1751504227611" duration="8528000" />
+      <workItem from="1751594247839" duration="19196000" />
+      <workItem from="1751698519474" duration="3917000" />
+      <workItem from="1751702470475" duration="282000" />
+      <workItem from="1751703152444" duration="5996000" />
+      <workItem from="1751848511873" duration="16504000" />
+      <workItem from="1751934605746" duration="594000" />
+      <workItem from="1752021298346" duration="1189000" />
+      <workItem from="1752108478014" duration="594000" />
+      <workItem from="1752132776214" duration="594000" />
+      <workItem from="1753693381200" duration="343000" />
+      <workItem from="1753694623803" duration="2033000" />
+      <workItem from="1753750409948" duration="594000" />
+      <workItem from="1753836343596" duration="8469000" />
+      <workItem from="1753926241612" duration="3118000" />
+      <workItem from="1754012168248" duration="4598000" />
+      <workItem from="1754099124380" duration="16210000" />
+      <workItem from="1754269445977" duration="7083000" />
+    </task>
+    <task id="LOCAL-00001" summary="1、处理缺陷">
+      <created>1751420258028</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1751420258028</updated>
+    </task>
+    <task id="LOCAL-00002" summary="1、处理缺陷">
+      <created>1751423684280</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1751423684280</updated>
+    </task>
+    <task id="LOCAL-00003" summary="1、优化样式">
+      <created>1751426745407</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1751426745407</updated>
+    </task>
+    <task id="LOCAL-00004" summary="1、优化转账和撤回逻辑">
+      <created>1751428487241</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1751428487241</updated>
+    </task>
+    <task id="LOCAL-00005" summary="1、优化开台逻辑">
+      <created>1751428752981</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1751428752981</updated>
+    </task>
+    <task id="LOCAL-00006" summary="1、emoji添加">
+      <created>1751430006630</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1751430006630</updated>
+    </task>
+    <task id="LOCAL-00007" summary="1、emoji添加">
+      <created>1751430102677</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1751430102677</updated>
+    </task>
+    <task id="LOCAL-00008" summary="1、emoji添加">
+      <created>1751430223948</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1751430223948</updated>
+    </task>
+    <task id="LOCAL-00009" summary="1、处理开台时长跟总费用缺陷">
+      <created>1751439492959</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1751439492959</updated>
+    </task>
+    <task id="LOCAL-00010" summary="1、处理重置的所有缺陷">
+      <created>1751443036054</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1751443036054</updated>
+    </task>
+    <task id="LOCAL-00011" summary="1、处理关台后费用没有刷新的缺陷">
+      <created>1751448737090</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1751448737090</updated>
+    </task>
+    <task id="LOCAL-00012" summary="1、处理关台后成员费用还增加缺陷">
+      <created>1751516869957</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1751516869957</updated>
+    </task>
+    <task id="LOCAL-00013" summary="1、关台后隐藏成员操作按钮">
+      <created>1751536317164</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1751536317164</updated>
+    </task>
+    <task id="LOCAL-00014" summary="1、相对稳定版本v1，待优化点开台后开台按钮仍可点击">
+      <created>1751597106935</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1751597106935</updated>
+    </task>
+    <task id="LOCAL-00015" summary="1、成员样式优化">
+      <created>1751599610814</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1751599610814</updated>
+    </task>
+    <task id="LOCAL-00016" summary="1、增加水火emoji">
+      <created>1751600309586</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1751600309586</updated>
+    </task>
+    <task id="LOCAL-00017" summary="1、终版V1">
+      <created>1751601580839</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1751601580839</updated>
+    </task>
+    <task id="LOCAL-00018" summary="1、终版V1，优化输入框缓存，未完成后台定时操作">
+      <created>1751603350713</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1751603350713</updated>
+    </task>
+    <task id="LOCAL-00019" summary="1、终版V1，优化文案及定时关台优化，未完成后台定时操作">
+      <created>1751606042730</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1751606042730</updated>
+    </task>
+    <task id="LOCAL-00020" summary="1、暂存">
+      <created>1751698755918</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1751698755919</updated>
+    </task>
+    <task id="LOCAL-00021" summary="1、暂存">
+      <created>1751698998283</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1751698998283</updated>
+    </task>
+    <task id="LOCAL-00022" summary="1、终版v1，修文案，余额变积分">
+      <created>1751702561528</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1751702561528</updated>
+    </task>
+    <task id="LOCAL-00023" summary="1、终版v1，添加日志">
+      <created>1751703891834</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1751703891834</updated>
+    </task>
+    <task id="LOCAL-00024" summary="1、终版v2，UI优化">
+      <created>1751709155933</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1751709155933</updated>
+    </task>
+    <task id="LOCAL-00025" summary="1、终版v2，暂存">
+      <created>1751854356376</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1751854356376</updated>
+    </task>
+    <task id="LOCAL-00026" summary="1、终版v2，修复关台后总费用刷新页面会变动的缺陷">
+      <created>1751855491199</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1751855491199</updated>
+    </task>
+    <task id="LOCAL-00027" summary="1、终版v2，样式修改">
+      <created>1751857384072</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1751857384072</updated>
+    </task>
+    <task id="LOCAL-00028" summary="1、终版v2，未开台新增移除成员按钮">
+      <created>1751858217306</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1751858217306</updated>
+    </task>
+    <task id="LOCAL-00029" summary="1、终版v2，成员样式调整（积分双色）">
+      <created>1751860747737</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1751860747737</updated>
+    </task>
+    <task id="LOCAL-00030" summary="1、数据共享测试">
+      <created>1753869042160</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1753869042160</updated>
+    </task>
+    <task id="LOCAL-00031" summary="1、数据共享测试">
+      <created>1754101229636</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1754101229636</updated>
+    </task>
+    <task id="LOCAL-00032" summary="1、数据共享测试">
+      <created>1754119927674</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1754119927674</updated>
+    </task>
+    <task id="LOCAL-00033" summary="1、数据共享测试">
+      <created>1754121241188</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1754121241188</updated>
+    </task>
+    <task id="LOCAL-00034" summary="1、数据共享测试">
+      <created>1754122516107</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1754122516107</updated>
+    </task>
+    <task id="LOCAL-00035" summary="1、数据共享测试">
+      <created>1754124475669</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1754124475669</updated>
+    </task>
+    <task id="LOCAL-00036" summary="1、数据共享测试">
+      <created>1754126052901</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1754126052901</updated>
+    </task>
+    <task id="LOCAL-00037" summary="1、数据共享测试">
+      <created>1754127582929</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1754127582929</updated>
+    </task>
+    <task id="LOCAL-00038" summary="1、数据共享测试">
+      <created>1754128502413</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1754128502413</updated>
+    </task>
+    <task id="LOCAL-00039" summary="1、数据共享测试">
+      <created>1754270951477</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1754270951477</updated>
+    </task>
+    <task id="LOCAL-00040" summary="1、数据共享测试">
+      <created>1754271724434</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1754271724434</updated>
+    </task>
+    <task id="LOCAL-00041" summary="1、数据共享测试">
+      <created>1754272743129</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1754272743129</updated>
+    </task>
+    <task id="LOCAL-00042" summary="1、数据共享测试">
+      <created>1754273310117</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1754273310117</updated>
+    </task>
+    <task id="LOCAL-00043" summary="1、数据共享测试">
+      <created>1754273855713</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1754273855713</updated>
+    </task>
+    <task id="LOCAL-00044" summary="1、数据共享测试">
+      <created>1754274759952</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1754274759952</updated>
+    </task>
+    <task id="LOCAL-00045" summary="1、数据共享测试">
+      <created>1754277907253</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1754277907253</updated>
+    </task>
+    <option name="localTasksCounter" value="46" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="1、优化样式" />
+    <MESSAGE value="1、优化转账和撤回逻辑" />
+    <MESSAGE value="1、优化开台逻辑" />
+    <MESSAGE value="1、emoji添加" />
+    <MESSAGE value="1、处理开台时长跟总费用缺陷" />
+    <MESSAGE value="1、处理重置的所有缺陷" />
+    <MESSAGE value="1、处理关台后费用没有刷新的缺陷" />
+    <MESSAGE value="1、处理关台后成员费用还增加缺陷" />
+    <MESSAGE value="1、关台后隐藏成员操作按钮" />
+    <MESSAGE value="1、相对稳定版本v1，待优化点开台后开台按钮仍可点击" />
+    <MESSAGE value="1、成员样式优化" />
+    <MESSAGE value="1、增加水火emoji" />
+    <MESSAGE value="1、终版V1" />
+    <MESSAGE value="1、终版V1，优化输入框缓存，未完成后台定时操作" />
+    <MESSAGE value="1、终版V1，优化文案及定时关台优化，未完成后台定时操作" />
+    <MESSAGE value="1、暂存" />
+    <MESSAGE value="1、终版v1，修文案，余额变积分" />
+    <MESSAGE value="1、终版v1，添加日志" />
+    <MESSAGE value="1、终版v2，UI优化" />
+    <MESSAGE value="1、终版v2，暂存" />
+    <MESSAGE value="1、终版v2，修复关台后总费用刷新页面会变动的缺陷" />
+    <MESSAGE value="1、终版v2，样式修改" />
+    <MESSAGE value="1、终版v2，未开台新增移除成员按钮" />
+    <MESSAGE value="1、终版v2，成员样式调整（积分双色）" />
+    <MESSAGE value="1、数据共享测试" />
+    <option name="LAST_COMMIT_MESSAGE" value="1、数据共享测试" />
+  </component>
+</project>

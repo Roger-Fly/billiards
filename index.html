@@ -1998,7 +1998,6 @@
         });
     }
 
-    // 替换整个 updateLocalDataFromRoom 函数
     // 完全重写 updateLocalDataFromRoom 函数，确保房间内开台关台逻辑与原始链接一致
     function updateLocalDataFromRoom(roomData) {
         if (!roomData) return;
@@ -2107,7 +2106,7 @@
                     needToSaveLocal = true;
                 }
                 // 如果已经开台但时间不同，更新时间
-                else if (startTime.getTime() !== newStartTime.getTime()) {
+                else if (startTime && startTime.getTime() !== newStartTime.getTime()) {
                     startTime = newStartTime;
                     needToUpdateUI = true;
                     needToSaveLocal = true;
@@ -2148,9 +2147,10 @@
                     const totalTableCost = calculateTotalTableCost();
                     localStorage.setItem('lastTotalCost', totalTableCost);
                     localStorage.setItem('lastWaterFee', collectedWaterFee);
-                    const totalDuration = now - startTime;
+                    const totalDuration = now - (startTime || new Date());
                     localStorage.setItem('lastTotalDuration', totalDuration.toString());
 
+                    // 记录关台日志（复制 endTable 中的日志处理）
                     logUseDate(now, `关台成功，总费用：${totalTableCost.toFixed(2)} 元\n`);
                 }
 
