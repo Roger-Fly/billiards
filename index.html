@@ -1999,13 +1999,14 @@
     }
 
     // 替换整个 updateLocalDataFromRoom 函数
+    // 完全重写 updateLocalDataFromRoom 函数，确保房间内开台关台逻辑与原始链接一致
     function updateLocalDataFromRoom(roomData) {
         if (!roomData) return;
 
         try {
             const settings = roomData.settings || {};
 
-            // 检查是否需要更新UI
+            // 检查是否需要更新UI和保存本地数据
             let needToUpdateUI = false;
             let needToSaveLocal = false;
 
@@ -2014,36 +2015,41 @@
                 document.getElementById('hourlyRate').value = settings.hourlyRate;
                 hourlyRate = settings.hourlyRate;
                 needToUpdateUI = true;
+                needToSaveLocal = true;
             }
 
             if (settings.waterFeeRate !== undefined && settings.waterFeeRate !== waterFeeRate) {
                 document.getElementById('waterFeeRate').value = settings.waterFeeRate;
                 waterFeeRate = settings.waterFeeRate;
                 needToUpdateUI = true;
+                needToSaveLocal = true;
             }
 
             if (settings.waterFeeTarget !== undefined && settings.waterFeeTarget !== waterFeeTarget) {
                 document.getElementById('waterFeeTarget').value = settings.waterFeeTarget;
                 waterFeeTarget = settings.waterFeeTarget;
                 needToUpdateUI = true;
+                needToSaveLocal = true;
             }
 
             // 更新水费
             if (roomData.collectedWaterFee !== undefined && roomData.collectedWaterFee !== collectedWaterFee) {
                 collectedWaterFee = roomData.collectedWaterFee;
                 needToUpdateUI = true;
+                needToSaveLocal = true;
             }
 
             // 更新日志
             if (roomData.logs !== undefined && roomData.logs !== document.getElementById('log').textContent) {
                 document.getElementById('log').textContent = roomData.logs || '';
                 needToUpdateUI = true;
+                needToSaveLocal = true;
             }
 
             const wasStarted = !!startTime;
             const isEnded = settings.isEnded === true;
 
-            // 处理开台逻辑 - 完全复制原始链接的 startTable 逻辑
+            // 处理开台逻辑 - 完全模拟原始链接 startTable 函数
             if (settings.startTime) {
                 const newStartTime = new Date(settings.startTime);
 
@@ -2051,7 +2057,7 @@
                 if (!wasStarted) {
                     startTime = newStartTime;
 
-                    // 设置关台方式参数
+                    // 设置关台方式参数（复制 startTable 中的设置）
                     if (settings.endMode !== undefined) {
                         document.getElementById("endModeSelect").value = settings.endMode;
                         toggleEndOptions();
@@ -2094,14 +2100,20 @@
                         }
                     });
 
-                    // 记录日志
+                    // 记录日志（复制 startTable 中的日志处理）
                     logUseDate(startTime, `开台成功`);
 
                     needToUpdateUI = true;
                     needToSaveLocal = true;
                 }
+                // 如果已经开台但时间不同，更新时间
+                else if (startTime.getTime() !== newStartTime.getTime()) {
+                    startTime = newStartTime;
+                    needToUpdateUI = true;
+                    needToSaveLocal = true;
+                }
             }
-            // 处理关台逻辑 - 完全复制原始链接的 endTable 逻辑
+            // 处理关台逻辑 - 完全模拟原始链接 endTable 函数
             else if (wasStarted) {
                 // 停止计时器（复制 endTable 中的计时器处理）
                 if (timerInterval) {
@@ -2139,7 +2151,6 @@
                     const totalDuration = now - startTime;
                     localStorage.setItem('lastTotalDuration', totalDuration.toString());
 
-                    // 记录关台日志
                     logUseDate(now, `关台成功，总费用：${totalTableCost.toFixed(2)} 元\n`);
                 }
 
