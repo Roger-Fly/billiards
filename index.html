@@ -2002,29 +2002,25 @@
                 needToUpdateUI = true;
             }
 
-            // 更新成员列表
-            if (roomData.members) {
-                const newMembers = parseMembersFromFirebase(roomData.members);
-
-                // 检查成员是否有实质性变化再更新
-                if (JSON.stringify(members || []) !== JSON.stringify(newMembers || [])) {
-                    members = newMembers || [];
-                    renderPeople();
-                }
-            }
-
             // 检查是否结束状态有变化
             const wasEnded = isTableEnded();
             const isEnded = settings.isEnded === true;
+            let endedStateChanged = false;
             if (wasEnded !== isEnded) {
+                endedStateChanged = true;
                 needToUpdateUI = true;
             }
 
             // 更新开台状态
+            let startedStateChanged = false;
             if (settings.startTime) {
                 const newStartTime = new Date(settings.startTime);
                 if (!startTime || (startTime && startTime.getTime() !== newStartTime.getTime())) {
                     startTime = newStartTime;
+                    startedStateChanged = true;
+                    needToUpdateUI = true;
+
+                    // 更新UI状态
                     document.getElementById('btnStart').disabled = true;
                     document.getElementById('btnEnd').disabled = false;
                     disableInputs();
@@ -2041,27 +2037,47 @@
                             }
                         }, 1000);
                     }
-                    needToUpdateUI = true;
 
-                    // 记录开台日志（仅当本地未开台时）
-                    if (!wasEnded && !startTime) {
-                        logUseDate(startTime, `开台成功`);
-                        speak("我在小铁很想虐你，就是战别BB！");
-                    }
+                    // 更新成员状态
+                    members.forEach(member => {
+                        if (!member.active) {
+                            member.joinTime = new Date();
+                            member.active = true;
+                        }
+                    });
                 }
             } else {
                 if (startTime) {
                     startTime = null;
+                    startedStateChanged = true;
+                    needToUpdateUI = true;
+
+                    // 更新UI状态
                     document.getElementById('btnStart').disabled = !Array.isArray(members) || (members || []).length === 0;
                     document.getElementById('btnEnd').disabled = true;
                     enableInputs();
-                    needToUpdateUI = true;
 
-                    // 如果是从开台状态变为关台状态
-                    if (!isEnded) {
-                        const now = new Date();
-                        logUseDate(now, `关台成功`);
-                        speak("关台成功");
+                    // 停止计时器
+                    if (timerInterval) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                    }
+                    if (durationInterval) {
+                        clearInterval(durationInterval);
+                        durationInterval = null;
+                    }
+
+                    // 如果是关台状态，更新成员状态
+                    if (isEnded) {
+                        members.forEach(member => {
+                            if (member.active) {
+                                const now = new Date();
+                                member.totalTime += now - member.joinTime;
+                                member.joinTime = null;
+                                member.active = false;
+                                member.finalBalance = calculateMemberCost(member);
+                            }
+                        });
                     }
                 }
             }
@@ -2091,10 +2107,36 @@
                 document.getElementById("durationInput").value = settings.duration || "";
             }
 
+            // 更新成员列表（必须在处理开台/关台状态之后）
+            if (roomData.members) {
+                const newMembers = parseMembersFromFirebase(roomData.members);
+
+                // 检查成员数据是否有变化
+                const membersChanged = JSON.stringify(members || []) !== JSON.stringify(newMembers || []);
+                if (membersChanged) {
+                    members = newMembers || [];
+                    needToUpdateUI = true;
+                }
+            }
+
             // 重新渲染页面
             if (needToUpdateUI) {
                 updateCosts();
                 updateButtonStates();
+                renderPeople();
+            }
+
+            // 处理开台日志
+            if (startedStateChanged && startTime) {
+                logUseDate(startTime, `开台成功`);
+                speak("我在小铁很想虐你，就是战别BB！");
+            }
+
+            // 处理关台日志
+            if (startedStateChanged && !startTime) {
+                const now = new Date();
+                logUseDate(now, `关台成功`);
+                speak("关台成功");
             }
 
             // 保存到本地存储
