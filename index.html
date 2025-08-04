@@ -1998,13 +1998,14 @@
         });
     }
 
-    // 修复房间数据同步问题
-    // 修复房间内开台和关台逻辑，确保与原始链接一致
+    // 替换整个 updateLocalDataFromRoom 函数
     function updateLocalDataFromRoom(roomData) {
         if (!roomData) return;
 
         try {
             const settings = roomData.settings || {};
+
+            // 检查是否需要更新UI
             let needToUpdateUI = false;
             let needToSaveLocal = false;
 
@@ -2040,17 +2041,17 @@
             }
 
             const wasStarted = !!startTime;
-            const wasEnded = isTableEnded();
             const isEnded = settings.isEnded === true;
 
-            // 处理开台逻辑 - 严格按照原始链接逻辑
+            // 处理开台逻辑 - 完全复制原始链接的 startTable 逻辑
             if (settings.startTime) {
                 const newStartTime = new Date(settings.startTime);
-                // 只有在之前未开台时才处理开台逻辑
+
+                // 如果之前未开台，则执行完整开台逻辑
                 if (!wasStarted) {
                     startTime = newStartTime;
 
-                    // 设置关台相关参数
+                    // 设置关台方式参数
                     if (settings.endMode !== undefined) {
                         document.getElementById("endModeSelect").value = settings.endMode;
                         toggleEndOptions();
@@ -2063,7 +2064,7 @@
                     }
                     scheduledEndTime = settings.scheduledEndTime ? new Date(settings.scheduledEndTime) : null;
 
-                    // 更新UI状态 - 与原始链接一致
+                    // 设置UI状态（复制 startTable 中的UI设置）
                     document.getElementById('btnStart').disabled = true;
                     document.getElementById('btnEnd').disabled = false;
                     document.getElementById('hourlyRate').disabled = true;
@@ -2071,10 +2072,10 @@
                     document.getElementById('endTimeInput').disabled = true;
                     document.getElementById('durationInput').disabled = true;
 
-                    // 更新显示时间
+                    // 设置时间显示（复制 startTable 中的时间显示设置）
                     document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>00:00:00</span>`;
 
-                    // 启动计时器 - 与原始链接一致
+                    // 启动计时器（复制 startTable 中的计时器设置）
                     if (durationInterval) clearInterval(durationInterval);
                     durationInterval = setInterval(() => {
                         if (!startTime) return;
@@ -2085,7 +2086,7 @@
                     if (timerInterval) clearInterval(timerInterval);
                     timerInterval = setInterval(updateCosts, 1000);
 
-                    // 设置所有成员为在线状态 - 与原始链接一致
+                    // 设置成员状态（复制 startTable 中的成员处理）
                     members.forEach(member => {
                         if (!member.active) {
                             member.joinTime = new Date();
@@ -2093,24 +2094,16 @@
                         }
                     });
 
-                    // 记录开台日志 - 与原始链接一致
+                    // 记录日志
                     logUseDate(startTime, `开台成功`);
-                    // 不要在这里触发语音，避免重复触发
 
-                    needToUpdateUI = true;
-                    needToSaveLocal = true;
-                }
-                // 如果已经开台，只更新计时显示
-                else if (startTime.getTime() !== newStartTime.getTime()) {
-                    startTime = newStartTime;
                     needToUpdateUI = true;
                     needToSaveLocal = true;
                 }
             }
-
-            // 处理关台逻辑 - 严格按照原始链接逻辑
+            // 处理关台逻辑 - 完全复制原始链接的 endTable 逻辑
             else if (wasStarted) {
-                // 停止计时器 - 与原始链接一致
+                // 停止计时器（复制 endTable 中的计时器处理）
                 if (timerInterval) {
                     clearInterval(timerInterval);
                     timerInterval = null;
@@ -2122,7 +2115,7 @@
 
                 const now = new Date();
 
-                // 更新成员状态 - 与原始链接一致
+                // 更新成员状态（复制 endTable 中的成员处理）
                 members.forEach(member => {
                     if (member.active) {
                         member.totalTime += now - member.joinTime;
@@ -2133,26 +2126,27 @@
 
                 // 如果是正常关台
                 if (isEnded) {
-                    // 计算每个成员的最终费用 - 与原始链接一致
+                    // 计算每个成员的最终费用（复制 endTable 中的费用计算）
                     members.forEach(member => {
                         member.finalBalance = calculateMemberCost(member);
                     });
 
-                    // 保存关台数据到本地存储 - 与原始链接一致
+                    // 保存关台数据到本地存储（复制 endTable 中的本地存储）
                     localStorage.setItem('endTime', now.toISOString());
                     const totalTableCost = calculateTotalTableCost();
                     localStorage.setItem('lastTotalCost', totalTableCost);
                     localStorage.setItem('lastWaterFee', collectedWaterFee);
-                    const totalDuration = now - startTime; // 注意这里应该用原来的startTime
+                    const totalDuration = now - startTime;
                     localStorage.setItem('lastTotalDuration', totalDuration.toString());
 
-                    // 记录关台日志 - 与原始链接一致
+                    // 记录关台日志
                     logUseDate(now, `关台成功，总费用：${totalTableCost.toFixed(2)} 元\n`);
-                    // 不触发alert和语音，避免重复触发
                 }
 
-                // 更新UI状态 - 与原始链接一致
+                // 重置状态
                 startTime = null;
+
+                // 更新UI状态（复制 endTable 中的UI设置）
                 document.getElementById('btnStart').disabled = members.length === 0;
                 document.getElementById('btnEnd').disabled = true;
                 document.getElementById('hourlyRate').disabled = false;
