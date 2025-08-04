@@ -1916,6 +1916,17 @@
 
         // 保存房间数据
         set(roomRef, roomData).then(() => {
+            // 清除本地缓存（创建新房间时）
+            clearLocalStorageData();
+            localStorage.setItem('userId', userId);
+
+            // 重置页面状态
+            hourlyRate = localData.hourlyRate;
+            waterFeeRate = localData.waterFeeRate;
+            waterFeeTarget = localData.waterFeeTarget;
+            members = localData.members || [];
+            document.getElementById('log').textContent = localData.logContent || '';
+
             // 生成房间链接
             const roomLink = `https://roger-fly.github.io/billiards/?room=${roomId}`;
 
@@ -1930,6 +1941,10 @@
 
             // 开始监听房间数据变化
             setupRoomListeners();
+
+            // 重新渲染页面
+            renderPeople();
+            updateButtonStates();
         }).catch(error => {
             console.error("创建房间失败:", error);
             alert("创建房间失败，请重试");
@@ -1953,11 +1968,31 @@
             }
         });
 
-        // 监听房间删除事件
+        // 监听房间删除事件（房间被关闭）
         onValue(currentRoomRef, (snapshot) => {
             if (!snapshot.exists() && currentRoomId) {
-                alert("房间已被房主关闭");
+                // 房间已被关闭，显示提示信息
+                alert("房间已被关闭");
+
+                // 清除本地缓存
+                clearLocalStorageData();
                 localStorage.removeItem('userId');
+                localStorage.removeItem('tableData');
+                localStorage.removeItem('endTime');
+                localStorage.removeItem('lastTotalCost');
+                localStorage.removeItem('lastWaterFee');
+                localStorage.removeItem('lastTotalDuration');
+
+                // 重置页面状态
+                hourlyRate = 0;
+                startTime = null;
+                scheduledEndTime = null;
+                collectedWaterFee = 0;
+                members = [];
+                if (timerInterval) clearInterval(timerInterval);
+                if (durationInterval) clearInterval(durationInterval);
+
+                // 跳转到基础链接
                 window.location.href = "https://roger-fly.github.io/billiards/";
             }
         });
@@ -2005,19 +2040,16 @@
             // 检查是否结束状态有变化
             const wasEnded = isTableEnded();
             const isEnded = settings.isEnded === true;
-            let endedStateChanged = false;
             if (wasEnded !== isEnded) {
-                endedStateChanged = true;
                 needToUpdateUI = true;
             }
 
-            // 更新开台状态
-            let startedStateChanged = false;
+            // 处理开台状态变化
             if (settings.startTime) {
                 const newStartTime = new Date(settings.startTime);
+                // 如果之前没有开台或者开台时间不同
                 if (!startTime || (startTime && startTime.getTime() !== newStartTime.getTime())) {
                     startTime = newStartTime;
-                    startedStateChanged = true;
                     needToUpdateUI = true;
 
                     // 更新UI状态
@@ -2038,18 +2070,23 @@
                         }, 1000);
                     }
 
-                    // 更新成员状态
+                    // 更新所有成员状态为在线并设置加入时间
                     members.forEach(member => {
                         if (!member.active) {
                             member.joinTime = new Date();
                             member.active = true;
                         }
                     });
+
+                    // 记录开台日志
+                    logUseDate(startTime, `开台成功`);
+                    speak("我在小铁很想虐你，就是战别BB！");
                 }
             } else {
+                // 处理关台状态变化
                 if (startTime) {
+                    const now = new Date();
                     startTime = null;
-                    startedStateChanged = true;
                     needToUpdateUI = true;
 
                     // 更新UI状态
@@ -2067,11 +2104,10 @@
                         durationInterval = null;
                     }
 
-                    // 如果是关台状态，更新成员状态
+                    // 如果是关台状态，更新所有成员状态
                     if (isEnded) {
                         members.forEach(member => {
                             if (member.active) {
-                                const now = new Date();
                                 member.totalTime += now - member.joinTime;
                                 member.joinTime = null;
                                 member.active = false;
@@ -2079,6 +2115,10 @@
                             }
                         });
                     }
+
+                    // 记录关台日志
+                    logUseDate(now, `关台成功`);
+                    speak("关台成功");
                 }
             }
 
@@ -2107,11 +2147,11 @@
                 document.getElementById("durationInput").value = settings.duration || "";
             }
 
-            // 更新成员列表（必须在处理开台/关台状态之后）
+            // 更新成员列表（在处理完开台/关台逻辑之后）
             if (roomData.members) {
                 const newMembers = parseMembersFromFirebase(roomData.members);
 
-                // 检查成员数据是否有变化
+                // 检查成员数据是否有实质性变化
                 const membersChanged = JSON.stringify(members || []) !== JSON.stringify(newMembers || []);
                 if (membersChanged) {
                     members = newMembers || [];
@@ -2124,19 +2164,6 @@
                 updateCosts();
                 updateButtonStates();
                 renderPeople();
-            }
-
-            // 处理开台日志
-            if (startedStateChanged && startTime) {
-                logUseDate(startTime, `开台成功`);
-                speak("我在小铁很想虐你，就是战别BB！");
-            }
-
-            // 处理关台日志
-            if (startedStateChanged && !startTime) {
-                const now = new Date();
-                logUseDate(now, `关台成功`);
-                speak("关台成功");
             }
 
             // 保存到本地存储
@@ -2385,6 +2412,17 @@
     // 实际执行加入房间的函数
     function performJoinRoom(roomId) {
         const {database, ref, onValue} = window.firebaseDB;
+
+        // 加入新房间前先清除旧的房间数据
+        currentRoomId = null;
+        currentRoomRef = null;
+
+        // 清除本地缓存（但保留用户ID）
+        const userId = localStorage.getItem('userId');
+        clearLocalStorageData();
+        if (userId) {
+            localStorage.setItem('userId', userId);
+        }
 
         currentRoomId = roomId;
         currentRoomRef = ref(database, 'rooms/' + roomId);
