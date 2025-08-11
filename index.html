@@ -767,6 +767,14 @@
                     <input type="number" id="waterFeeTarget" min="0" step="0.01" value="50">
                 </div>
             </div>
+
+            <div class="form-group">
+                <label for="minWaterFee">最低抽成积分：</label>
+                <div class="input-group">
+                    <i class="fas fa-level-down-alt"></i>
+                    <input type="number" id="minWaterFee" min="0" step="0.01" value="0">
+                </div>
+            </div>
         </div>
 
         <div class="result-container">
@@ -941,6 +949,7 @@
     let members = [];
     let waterFeeRate = 10;
     let waterFeeTarget = 50;
+    let minWaterFee = 0;
     let collectedWaterFee = 0;
     let blurListenersSetup = false;
     let saveTimeout;
@@ -1131,11 +1140,13 @@
 
         const rate = parseFloat(document.getElementById('waterFeeRate').value) / 100;
         const target = parseFloat(document.getElementById('waterFeeTarget').value);
+        const minFee = parseFloat(document.getElementById('minWaterFee').value); // 新增
 
         let fee = 0;
         let actualAmount = amount;
 
-        if (collectedWaterFee < target) {
+        // 修改抽成判断逻辑：当水费未达到目标且掏分金额大于最低抽成积分时才抽成
+        if (collectedWaterFee < target && amount > minFee) {
             const remaining = target - collectedWaterFee;
             const possibleFee = Math.abs(amount) * rate;
 
@@ -1151,7 +1162,7 @@
 
             log(`从 ${fromMember.name} 抽取 ${fee.toFixed(2)} 分水费（当前：${collectedWaterFee.toFixed(2)}）`);
         } else {
-            log("已达水费上限，停止抽成");
+            log("已达水费上限或掏分金额未达到最低抽成标准，停止抽成");
         }
 
         fromMember.point -= amount;
@@ -1665,6 +1676,7 @@
         const hourlyRate = getNumberInput('hourlyRate');
         const waterFeeRate = getNumberInput('waterFeeRate');
         const waterFeeTarget = getNumberInput('waterFeeTarget');
+        const minWaterFee = getNumberInput('minWaterFee');
         const data = {
             hourlyRate,
             startTime: startTime ? startTime.toISOString() : null,
@@ -1680,6 +1692,7 @@
             })),
             waterFeeRate,
             waterFeeTarget,
+            minWaterFee,
             collectedWaterFee,
             logContent: document.getElementById('log').textContent,
             isEnded: startTime && isTableEnded()
@@ -1692,11 +1705,13 @@
             const hourlyRate = getNumberInput('hourlyRate');
             const waterFeeRate = getNumberInput('waterFeeRate');
             const waterFeeTarget = getNumberInput('waterFeeTarget');
+            const minWaterFee = getNumberInput('minWaterFee');
 
             update(currentRoomRef, {
                 'settings/hourlyRate': hourlyRate,
                 'settings/waterFeeRate': waterFeeRate,
-                'settings/waterFeeTarget': waterFeeTarget
+                'settings/waterFeeTarget': waterFeeTarget,
+                'settings/minWaterFee': minWaterFee
             });
 
             // 同步成员数据
@@ -1717,6 +1732,7 @@
             scheduledEndTime = data.scheduledEndTime ? new Date(data.scheduledEndTime) : null;
             waterFeeRate = data.waterFeeRate;
             waterFeeTarget = data.waterFeeTarget;
+            minWaterFee = data.minWaterFee !== undefined ? data.minWaterFee : 0;
             collectedWaterFee = data.collectedWaterFee;
 
             members = (data.members || []).map(member => ({
@@ -1729,6 +1745,7 @@
             document.getElementById('hourlyRate').value = hourlyRate;
             document.getElementById('waterFeeRate').value = waterFeeRate;
             document.getElementById('waterFeeTarget').value = waterFeeTarget;
+            document.getElementById('minWaterFee').value = minWaterFee;
             document.getElementById('log').textContent = data.logContent || '';
 
             const isEnded = data.isEnded === true;
@@ -1784,12 +1801,8 @@
                 document.getElementById('btnEnd').disabled = true;
                 document.getElementById('btnAdd').disabled = false;
                 document.getElementById('btnReset').disabled = false;
-
                 enableInputs();
             }
-
-            updateCosts();
-            renderPeople();
         }
     }
 
@@ -1895,6 +1908,7 @@
             hourlyRate: getNumberInput('hourlyRate'),
             waterFeeRate: getNumberInput('waterFeeRate'),
             waterFeeTarget: getNumberInput('waterFeeTarget'),
+            minWaterFee: getNumberInput('minWaterFee'),
             members: members,
             logContent: document.getElementById('log').textContent || '',
         };
@@ -1908,6 +1922,7 @@
                 hourlyRate: localData.hourlyRate,
                 waterFeeRate: localData.waterFeeRate,
                 waterFeeTarget: localData.waterFeeTarget,
+                minWaterFee: localData.minWaterFee,
                 isEnded: isTableEnded(),
                 startTime: startTime ? startTime.toISOString() : null
             },
@@ -1924,6 +1939,7 @@
             hourlyRate = localData.hourlyRate;
             waterFeeRate = localData.waterFeeRate;
             waterFeeTarget = localData.waterFeeTarget;
+            minWaterFee = localData.minWaterFee;
             members = localData.members || [];
             document.getElementById('log').textContent = localData.logContent || '';
 
@@ -2009,7 +2025,7 @@
             let needToUpdateUI = false;
             let needToSaveLocal = false;
 
-            // 1. 更新基础设置
+            // 1. 更新基础设置（同步输入框状态）
             if (settings.hourlyRate !== undefined && hourlyRate !== settings.hourlyRate) {
                 document.getElementById('hourlyRate').value = settings.hourlyRate;
                 hourlyRate = settings.hourlyRate;
@@ -2031,6 +2047,14 @@
                 needToSaveLocal = true;
             }
 
+            // 新增：同步最低抽成积分
+            if (settings.minWaterFee !== undefined && minWaterFee !== settings.minWaterFee) {
+                document.getElementById('minWaterFee').value = settings.minWaterFee;
+                minWaterFee = settings.minWaterFee;
+                needToUpdateUI = true;
+                needToSaveLocal = true;
+            }
+
             // 2. 更新水费和日志
             if (roomData.collectedWaterFee !== undefined && collectedWaterFee !== roomData.collectedWaterFee) {
                 collectedWaterFee = roomData.collectedWaterFee;
@@ -2044,11 +2068,11 @@
                 needToSaveLocal = true;
             }
 
-            // 3. 处理开台逻辑 - 完全复制 startTable 函数逻辑
+            // 3. 处理开台逻辑 - 完全镜像 startTable 逻辑
             if (settings.startTime) {
                 const newStartTime = new Date(settings.startTime);
 
-                // 如果之前未开台，则执行完整开台逻辑
+                // 如果之前未开台，执行完整开台逻辑
                 if (!startTime) {
                     startTime = newStartTime;
 
@@ -2087,7 +2111,7 @@
                     if (timerInterval) clearInterval(timerInterval);
                     timerInterval = setInterval(updateCosts, 1000);
 
-                    // 设置成员状态
+                    // 设置成员状态（强制所有成员在线）
                     members.forEach(member => {
                         if (!member.active) {
                             member.joinTime = new Date();
@@ -2095,17 +2119,23 @@
                         }
                     });
 
-                    // 记录日志
+                    // 记录日志和语音提示
                     logUseDate(startTime, `开台成功`);
                     speak("我在小铁很想虐你，就是战别BB！");
 
                     needToUpdateUI = true;
                     needToSaveLocal = true;
                 }
+                // 如果已开台但时间不同，更新时间显示
+                else if (newStartTime.getTime() !== startTime.getTime()) {
+                    startTime = newStartTime;
+                    needToUpdateUI = true;
+                    needToSaveLocal = true;
+                }
             }
-            // 4. 处理关台逻辑 - 完全复制 endTable 函数逻辑
+            // 4. 处理关台逻辑 - 完全镜像 endTable 逻辑
             else if (startTime) {
-                // 停止计时器
+                // 停止所有计时器
                 if (timerInterval) {
                     clearInterval(timerInterval);
                     timerInterval = null;
@@ -2126,9 +2156,9 @@
                     }
                 });
 
-                // 如果是正常关台
+                // 如果是正常关台，执行费用计算和存储
                 if (isTableEnded()) {
-                    // 计算每个成员的最终费用
+                    // 计算成员费用
                     members.forEach(member => {
                         member.finalBalance = calculateMemberCost(member);
                     });
@@ -2739,6 +2769,7 @@
                 'settings/hourlyRate': getNumberInput('hourlyRate'),
                 'settings/waterFeeRate': getNumberInput('waterFeeRate'),
                 'settings/waterFeeTarget': getNumberInput('waterFeeTarget'),
+                'settings/minWaterFee': getNumberInput('minWaterFee'),
                 'settings/startTime': startTime ? startTime.toISOString() : null,
                 'settings/isEnded': isTableEnded(),
                 'settings/scheduledEndTime': scheduledEndTime ? scheduledEndTime.toISOString() : null,
