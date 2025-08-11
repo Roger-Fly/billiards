@@ -2070,14 +2070,13 @@
 
             const wasStarted = !!startTime;
             const isEnded = settings.isEnded === true;
+            const roomStartTime = settings.startTime ? new Date(settings.startTime) : null;
 
             // 3. 处理开台逻辑 - 完全模拟原始链接 startTable 函数
-            if (settings.startTime) {
-                const newStartTime = new Date(settings.startTime);
-
-                // 如果之前未开台，执行完整开台逻辑
-                if (!wasStarted) {
-                    startTime = newStartTime;
+            if (roomStartTime) {
+                // 如果之前未开台，或者开台时间改变了，执行完整开台逻辑
+                if (!wasStarted || (startTime && startTime.getTime() !== roomStartTime.getTime())) {
+                    startTime = roomStartTime;
 
                     // 设置关台方式参数（复制 startTable 中的设置）
                     if (settings.endMode !== undefined) {
@@ -2129,12 +2128,6 @@
                     logUseDate(startTime, `开台成功`);
                     speak("我在小铁很想虐你，就是战别BB！");
 
-                    needToUpdateUI = true;
-                    needToSaveLocal = true;
-                }
-                // 如果已经开台但时间不同，更新时间
-                else if (startTime.getTime() !== newStartTime.getTime()) {
-                    startTime = newStartTime;
                     needToUpdateUI = true;
                     needToSaveLocal = true;
                 }
