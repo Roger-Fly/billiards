@@ -1267,6 +1267,7 @@
 
         waterFeeRate = parseFloat(document.getElementById('waterFeeRate').value);
         waterFeeTarget = parseFloat(document.getElementById('waterFeeTarget').value);
+        minWaterFee = parseFloat(document.getElementById('minWaterFee').value);
         collectedWaterFee = 0;
 
         const mode = document.getElementById("endModeSelect").value;
@@ -1322,6 +1323,9 @@
         document.getElementById('endModeSelect').disabled = true;
         document.getElementById('endTimeInput').disabled = true;
         document.getElementById('durationInput').disabled = true;
+        document.getElementById('waterFeeRate').disabled = true;
+        document.getElementById('waterFeeTarget').disabled = true;
+        document.getElementById('minWaterFee').disabled = true;
 
         members.forEach(member => {
             if (!member.active) {
@@ -1337,7 +1341,23 @@
         saveDataToLocalStorage();
 
         // 同步开台状态到Firebase，确保所有参与者都能看到
-        syncAllDataToFirebase();
+        if (currentRoomRef) {
+            const {update} = window.firebaseDB;
+            update(currentRoomRef, {
+                'settings/startTime': startTime.toISOString(),
+                'settings/isEnded': false,
+                'settings/hourlyRate': hourlyRate,
+                'settings/waterFeeRate': waterFeeRate,
+                'settings/waterFeeTarget': waterFeeTarget,
+                'settings/minWaterFee': minWaterFee,
+                'settings/endMode': mode,
+                'settings/scheduledEndTime': scheduledEndTime ? scheduledEndTime.toISOString() : null,
+                'settings/endTime': document.getElementById('endTimeInput').value,
+                'settings/duration': document.getElementById('durationInput').value
+            }).catch(error => {
+                console.error("同步开台状态失败:", error);
+            });
+        }
     }
 
     function endTable() {
@@ -1372,7 +1392,18 @@
         alert(`总费用：${totalTableCost.toFixed(2)} 元\n已记录每位参与者费用`);
 
         // 同步关台状态到Firebase，确保所有参与者都能看到
-        syncAllDataToFirebase();
+        if (currentRoomRef) {
+            const {update} = window.firebaseDB;
+            update(currentRoomRef, {
+                'settings/startTime': null,
+                'settings/isEnded': true,
+                'members': formatMembersForFirebase(members),
+                'logs': document.getElementById('log').textContent,
+                'collectedWaterFee': collectedWaterFee
+            }).catch(error => {
+                console.error("同步关台状态失败:", error);
+            });
+        }
 
         const dataStr = localStorage.getItem('tableData');
         if (dataStr) {
@@ -1384,15 +1415,6 @@
         updateCosts();
         saveDataToLocalStorage();
         updateButtonStates();
-
-        // 同步关台状态到Firebase
-        if (currentRoomRef) {
-            const {update} = window.firebaseDB;
-            update(currentRoomRef, {
-                'settings/startTime': null,
-                'settings/isEnded': true
-            });
-        }
 
         setTimeout(() => {
             isEnding = false;
