@@ -1412,6 +1412,25 @@
             localStorage.setItem('tableData', JSON.stringify(data));
         }
 
+        // 更新UI状态
+        document.getElementById('btnStart').disabled = members.length === 0;
+        document.getElementById('btnEnd').disabled = true;
+        document.getElementById('hourlyRate').disabled = false;
+        document.getElementById('endModeSelect').disabled = false;
+        document.getElementById('endTimeInput').disabled = false;
+        document.getElementById('durationInput').disabled = false;
+        document.getElementById('waterFeeRate').disabled = false;
+        document.getElementById('waterFeeTarget').disabled = false;
+        document.getElementById('minWaterFee').disabled = false;
+
+        // 更新费用显示
+        document.getElementById('totalCost').textContent = totalTableCost.toFixed(2);
+        document.getElementById('waterFee').textContent = collectedWaterFee.toFixed(2);
+        document.getElementById('durationDisplay').innerHTML = `已开台时间：<span>${formatDuration(totalDuration)}</span>`;
+
+        // 重置状态
+        startTime = null;
+
         updateCosts();
         saveDataToLocalStorage();
         updateButtonStates();
@@ -1808,6 +1827,17 @@
                     }, 1000);
                 }
             } else if (isEnded) {
+                // 关台后从本地存储恢复费用数据
+                const lastTotalCost = localStorage.getItem('lastTotalCost');
+                if (lastTotalCost) {
+                    document.getElementById('totalCost').textContent = parseFloat(lastTotalCost).toFixed(2);
+                }
+
+                const lastWaterFee = localStorage.getItem('lastWaterFee');
+                if (lastWaterFee) {
+                    document.getElementById('waterFee').textContent = parseFloat(lastWaterFee).toFixed(2);
+                }
+
                 const lastDuration = localStorage.getItem('lastTotalDuration');
                 if (lastDuration) {
                     const durationDisplay = document.getElementById('durationDisplay');
